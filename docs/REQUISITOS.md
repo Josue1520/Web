@@ -19,7 +19,7 @@ Referencia: **Proyecto de Sistemas.pdf**, documento adjunto por el usuario, etap
 - Productos y proveedores desactivados permanecen en el sistema; no se usan para nuevas compras. Las operaciones históricas conservan nombres, cantidades y precios originales.
 - No se permite vender más de la existencia disponible. Las transacciones evitan operaciones parciales y descuentos concurrentes por debajo de cero.
 - Pedidos recibidos y facturas anuladas no repiten sus movimientos de inventario.
-- Consultas de reportes limitadas desde el inicio de operaciones hasta la fecha actual de Costa Rica. Las operaciones usan la fecha del servidor, no una fecha futura enviada por el cliente.
+- Consultas de reportes limitadas desde el inicio de operaciones hasta la fecha actual de Costa Rica; las facturas de compra permiten consultar desde el XML importado más antiguo. Las operaciones usan la fecha del servidor, no una fecha futura enviada por el cliente.
 - Los reportes se generan al solicitarlos, no se guardan en la base y no permiten editar los registros de origen.
 - Precio de venta **con IVA incluido**, como en el prototipo original; IVA configurable por producto. El descuento porcentual se aplica antes de separar base e impuesto. El 13% es únicamente el valor inicial de demostración: no representa una clasificación tributaria de cada producto.
 - Costo promedio ponderado al recibir mercadería. La factura conserva el costo unitario de ese momento. La utilidad excluye facturas anuladas y compara ingreso sin IVA contra esos costos; no descuenta gastos operativos.
@@ -52,7 +52,7 @@ Se incorpora el apartado **Facturas de compra** como extensión de compras/factu
 - Factura de pedido recibido: asociación única, con comprobación de proveedor, productos y cantidades. Mantiene el inventario y la valoración ya registrada; no corrige retroactivamente costos ni utilidades si el precio facturado difiere del pedido.
 - Estado pagada/pendiente, vencimiento y registro posterior del pago completo; consulta y filtro de historial.
 - Reporte independiente de facturas de compra, impresión/PDF y Excel.
-- Administrador registra y marca pagos; dependiente consulta. Sin adjuntos, edición/anulación, recepción parcial, facturación parcial ni pagos parciales en esta ampliación.
+- Administrador registra y marca pagos; dependiente consulta. Sin edición/anulación, recepción parcial, facturación parcial ni pagos parciales. La ampliación XML descrita abajo permite conservar el archivo original.
 - Las bases existentes conservan todos sus datos; la colección de facturas de compra se incorpora automáticamente, sin reinicialización.
 
 Las pruebas comprueban cálculo de importes, entradas directas, ausencia de movimientos duplicados por asociación a pedidos, duplicados concurrentes, permisos, pagos, reportes y compatibilidad con la base anterior. El recorrido del navegador registra ambos tipos de compra, imprime el detalle, registra el pago y exporta el reporte.
@@ -65,3 +65,14 @@ Las pruebas comprueban cálculo de importes, entradas directas, ausencia de movi
 - Las facturas nuevas conservan fecha/hora de emisión. Las anteriores siguen siendo compatibles y muestran su fecha original.
 - La reimpresión no escribe operaciones ni modifica existencias; los tickets anulados muestran el estado y la justificación.
 - Reportes y registros de compras se imprimen en A4. No se integran funciones propietarias de Qupos, periféricos ESC/POS ni facturación fiscal.
+
+
+## Ampliación solicitada: diseño e importación XML
+
+- Navegación por operación, compras, catálogo y administración; tablas con importes alineados y controles consistentes, manteniendo tonos cálidos y verde salvia.
+- XML costarricense 4.3/4.4 con revisión previa, asociación por identificación del emisor y códigos comerciales; alta asistida de proveedor y productos faltantes.
+- Datos e importes reparsados por el servidor al guardar, prevención de duplicados por clave/consecutivo, transacción atómica y recuperación del XML original con hash SHA-256.
+- Las líneas repetidas del mismo producto conservan sus importes de origen; la entrada se agrupa por producto y se comprueban las cantidades totales al vincular un pedido.
+- Importación solo por administrador. XML de hasta 1 MB, CRC, cantidades enteras, IVA simple; rechazo de DTD/entidades, documentos dañados, formatos no admitidos e importes inconsistentes.
+- No se valida la firma, el XSD completo ni la respuesta de Hacienda, y no se emite aceptación fiscal. [Fuentes, decisiones y límites](DISENO-IMPORTACION-XML.md).
+- Pruebas de API y navegador con datos sintéticos, sin firma fiscal, que verifican precisión, permisos, duplicados concurrentes, inventario, descarga idéntica del original UTF-8 (incluido BOM), persistencia y formularios móviles.

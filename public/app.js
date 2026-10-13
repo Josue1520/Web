@@ -96,8 +96,13 @@ const statusBadge = (s) =>
   `<span class="badge ${["Activo", "Emitida", "Recibido", "Normal", "Pagada"].includes(s) ? "green" : ["Pendiente", "Bajo"].includes(s) ? "amber" : ["Agotado", "Anulada"].includes(s) ? "red" : "gray"}">${esc(s)}</span>`;
 const button = (label, action, id = "", style = "") =>
   `<button type="button" class="btn ${style}" data-action="${action}" data-id="${id}">${label}</button>`;
-const table = (heads, rows, empty = "No hay registros para mostrar.") =>
-  `<div class="table-wrap"><table><thead><tr>${heads.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.length ? rows.join("") : `<tr><td colspan="${heads.length}" class="empty">${esc(empty)}</td></tr>`}</tbody></table></div>`;
+const table = (heads, rows, empty = "No hay registros para mostrar.") => {
+  const numeric = heads.map((h) => /^(Cantidad|Costo.*|Precio.*|Total|IVA|Descuento|Existencias|Stock.*|Mínimo|Subtotal|Entradas|Salidas|Utilidad.*)$/.test(h));
+  return `<div class="table-wrap"><table><thead><tr>${heads.map((h, i) => `<th scope="col"${numeric[i] ? ' class="numeric"' : ""}>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.length ? rows.map((row) => {
+    let i = 0;
+    return row.replace(/<td>/g, () => `<td${numeric[i++] ? ' class="numeric"' : ""}>`);
+  }).join("") : `<tr><td colspan="${heads.length}" class="empty">${esc(empty)}</td></tr>`}</tbody></table></div>`;
+};
 const tr = (cells) => `<tr>${cells.map((c) => `<td>${c}</td>`).join("")}</tr>`;
 const options = (items, value) =>
   items
@@ -124,7 +129,7 @@ const filters = (extra) =>
 function login() {
   $("#modal").close();
   $("#app").innerHTML =
-    `<div class="login-layout"><section class="login-story">${brand}<div class="eyebrow story-label">Mini súper · Licorera</div><h1>Tu negocio,<br>en orden.</h1><p>Conecta tus proveedores, pedidos e inventario en un solo lugar.</p><div class="login-features"><span>Compras organizadas</span><span>Existencias al día</span><span>Decisiones con información</span></div></section><main class="login-panel"><div class="login-card"><div class="eyebrow">Bienvenido a SIPRO</div><h1>Iniciar sesión</h1><p class="muted">Ingresa tus credenciales para continuar.</p><form id="login-form" class="stack">${field("username", "Usuario", "", "text", 'required autocomplete="username" autofocus')}${field("password", "Contraseña", "", "password", 'required autocomplete="current-password"')}<div class="error" role="alert"></div><button class="btn primary block">Ingresar al sistema ${icon("arrow")}</button></form><div class="demo-box"><strong>Accesos de demostración</strong>Administrador: <b>admin</b> / <b>Admin123!</b><br>Dependiente: <b>dependiente</b> / <b>Caja123!</b></div><p class="login-footer">Proyecto académico · Los datos se conservan en este servidor.</p></div></main></div>`;
+    `<div class="login-layout"><section class="login-story">${brand}<div class="eyebrow story-label">Mini súper · Licorera</div><h1>Compras,<br>inventario y caja.</h1><p>Administración del mini súper y licorera.</p><div class="login-features"><span><b>01 / Compras</b> Pedidos y facturas de proveedores</span><span><b>02 / Inventario</b> Productos, existencias y movimientos</span><span><b>03 / Caja</b> Ventas y tickets de 80 mm</span></div></section><main class="login-panel"><div class="login-card"><div class="eyebrow">Bienvenido a SIPRO</div><h1>Iniciar sesión</h1><p class="muted">Ingresa tus credenciales para continuar.</p><form id="login-form" class="stack">${field("username", "Usuario", "", "text", 'required autocomplete="username" autofocus')}${field("password", "Contraseña", "", "password", 'required autocomplete="current-password"')}<div class="error" role="alert"></div><button class="btn primary block">Ingresar al sistema ${icon("arrow")}</button></form><div class="demo-box"><strong>Accesos de demostración</strong>Administrador: <b>admin</b> / <b>Admin123!</b><br>Dependiente: <b>dependiente</b> / <b>Caja123!</b></div><p class="login-footer">Proyecto académico · Los datos se conservan en este servidor.</p></div></main></div>`;
   $("#login-form").onsubmit = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -144,15 +149,14 @@ function login() {
 function shell() {
   const label = modules.find((m) => m[0] === currentPage)?.[1] || "Resumen";
   $("#app").innerHTML =
-    `<div class="shell"><aside class="sidebar">${brand}<div class="nav-caption">ESPACIO DE TRABAJO</div><nav class="nav-links" aria-label="Módulos">${modules
-      .filter((m) => m[0] !== "users" || isAdmin())
-      .map(
-        ([key, label]) =>
-          `<a href="#${key}" class="${currentPage === key ? "active" : ""}" ${currentPage === key ? 'aria-current="page"' : ""}>${icon(key)}${label}</a>`,
-      )
-      .join(
-        "",
-      )}</nav><div class="sidebar-bottom"><b>Sistema de pedidos a proveedores</b><br>Mini súper / Licorera<br>Versión académica · 1.0</div></aside><div class="main-wrap"><header class="topbar"><div class="breadcrumb">Mi negocio &nbsp; / &nbsp; <strong>${label}</strong></div><div class="user-info"><div class="avatar">${esc(state.me.name[0])}${esc(state.me.surname[0])}</div><div><b>${esc(state.me.name)}</b><small>${esc(state.me.role)}</small></div>${button(`${icon("logout")} Salir`, "logout", "", "plain small")}</div></header><main class="content" id="content"></main></div></div>`;
+    `<div class="shell"><aside class="sidebar">${brand}<nav class="nav-links" aria-label="Módulos">${[
+      ["Operación", ["home", "invoices", "sales-history"]],
+      ["Compras", ["orders", "purchase-invoices", "suppliers"]],
+      ["Catálogo", ["products", "inventory"]],
+      ["Administración", ["reports", "users"]],
+    ].map(([group, keys]) => `<div class="nav-group"><div class="nav-caption">${group}</div>${keys
+      .filter((key) => key !== "users" || isAdmin())
+      .map((key) => `<a href="#${key}" class="${currentPage === key ? "active" : ""}" ${currentPage === key ? 'aria-current="page"' : ""}>${icon(key)}${modules.find((m) => m[0] === key)[1]}</a>`).join("")}</div>`).join("")}</nav><div class="sidebar-bottom"><b>Sistema de pedidos a proveedores</b><br>Mini súper / Licorera<br>Versión académica · 1.0</div></aside><div class="main-wrap"><header class="topbar"><div class="breadcrumb">Mi negocio &nbsp; / &nbsp; <strong>${label}</strong></div><div class="user-info"><div class="avatar">${esc(state.me.name[0])}${esc(state.me.surname[0])}</div><div><b>${esc(state.me.name)}</b><small>${esc(state.me.role)}</small></div>${button(`${icon("logout")} Salir`, "logout", "", "plain small")}</div></header><main class="content" id="content"></main></div></div>`;
 }
 function render() {
   if (!state) return login();
@@ -260,7 +264,7 @@ function dashboard() {
             )
             .join("")
         : `<p class="muted">No tienes pedidos pendientes.</p><a href="#orders">Preparar el primer pedido →</a>`
-    }</div></section></div></div><p class="welcome-note">SIPRO · Proveedores, compras y ventas conectados.</p>`;
+    }</div></section></div></div>`;
 }
 function attachFilter(renderRows) {
   const controls = $("#content .filters");
@@ -453,7 +457,7 @@ function openDialog(title, content) {
   modal.innerHTML = `<div class="dialog-head"><h2 id="dialog-title">${title}</h2><button class="close" type="button" data-action="close" aria-label="Cerrar">×</button></div><div class="dialog-body">${content}</div>`;
   if (!modal.open) modal.showModal();
 }
-function editForm(title, content, submit) {
+function editForm(title, content, submit, afterSave) {
   openDialog(
     title,
     `<form id="edit-form"><div class="form-grid">${content}</div><p class="error" role="alert"></p><div class="dialog-footer">${button("Cancelar", "close")}<button class="btn primary" type="submit">Guardar</button></div></form>`,
@@ -464,10 +468,11 @@ function editForm(title, content, submit) {
       btn = $('button[type="submit"]', form);
     btn.disabled = true;
     try {
-      await submit(Object.fromEntries(new FormData(form)), form);
+      const saved = await submit(Object.fromEntries(new FormData(form)), form);
       $("#modal").close();
       await reload();
       toast("Cambios guardados correctamente.");
+      if (afterSave) await afterSave(saved);
     } catch (error) {
       $(".error", form).textContent = error.message;
     } finally {
@@ -475,7 +480,7 @@ function editForm(title, content, submit) {
     }
   };
 }
-function editSupplier(id) {
+function editSupplier(id, defaults = {}, afterSave) {
   const s = state.suppliers.find((s) => s.id === Number(id)) || {
     active: true,
     days: 0,
@@ -483,10 +488,11 @@ function editSupplier(id) {
     minimum: 0,
     terms: "Contado",
     idType: "Jurídica",
+    ...defaults,
   };
   editForm(
     s.id ? "Editar proveedor" : "Nuevo proveedor",
-    `${field("name", "Nombre o razón social", s.name, "text", "required")}${select("idType", "Tipo de identificación", ["Física", "Jurídica", "DIMEX"], s.idType, s.id ? "disabled" : "")}${field("identification", "Identificación", s.identification, "text", s.id ? "disabled" : "required")}${field("contact", "Contacto principal", s.contact, "text", "required")}${field("phone", "Teléfono", s.phone, "tel", "required")}${field("email", "Correo electrónico", s.email, "email", "required")}${field("address", "Dirección", s.address, "text", "required")}${select("terms", "Condición de pago", ["Contado", "Crédito"], s.terms)}${field("days", "Plazo de pago (días)", s.days, "number", 'required min="0" max="365"')}${field("delivery", "Entrega (días)", s.delivery, "number", 'required min="0" max="365"')}${field("minimum", "Pedido mínimo (₡)", s.minimum, "number", 'required min="0" step="0.01"')}${select("active", "Estado", activeOptions, s.active)}`,
+    `${field("name", "Nombre o razón social", s.name, "text", "required")}${select("idType", "Tipo de identificación", ["Física", "Jurídica", "DIMEX", "NITE"], s.idType, s.id ? "disabled" : "")}${field("identification", "Identificación", s.identification, "text", s.id ? "disabled" : "required")}${field("contact", "Contacto principal", s.contact, "text", "required")}${field("phone", "Teléfono", s.phone, "tel", "required")}${field("email", "Correo electrónico", s.email, "email", "required")}${field("address", "Dirección", s.address, "text", "required")}${select("terms", "Condición de pago", ["Contado", "Crédito"], s.terms)}${field("days", "Plazo de pago (días)", s.days, "number", 'required min="0" max="365"')}${field("delivery", "Entrega (días)", s.delivery, "number", 'required min="0" max="365"')}${field("minimum", "Pedido mínimo (₡)", s.minimum, "number", 'required min="0" step="0.01"')}${select("active", "Estado", activeOptions, s.active)}`,
     (b) =>
       api(`suppliers${s.id ? `/${s.id}` : ""}`, s.id ? "PUT" : "POST", {
         ...b,
@@ -494,6 +500,7 @@ function editSupplier(id) {
         active: b.active === "true",
         ...(!s.id ? { idType: b.idType } : {}),
       }),
+    afterSave,
   );
 }
 function offerRow(o = {}) {
@@ -507,7 +514,7 @@ function offerRow(o = {}) {
     o.supplierId,
   )}${field("offerCost", "Costo (₡)", o.cost ?? "", "number", 'required min="0.01" step="0.01"')}${field("offerDelivery", "Entrega (días)", o.delivery ?? 1, "number", 'required min="0" max="365"')}${button("×", "remove-offer", "", "small danger")}</div>`;
 }
-function editProduct(id) {
+function editProduct(id, defaults = {}, afterSave) {
   const p = state.products.find((p) => p.id === Number(id)) || {
     active: true,
     minimum: 5,
@@ -515,6 +522,7 @@ function editProduct(id) {
     cost: 0,
     tax: 13,
     offers: [],
+    ...defaults,
   };
   editForm(
     p.id ? "Editar producto" : "Nuevo producto",
@@ -529,6 +537,7 @@ function editProduct(id) {
           delivery: $('[name="offerDelivery"]', row).value,
         })),
       }),
+    afterSave,
   );
 }
 function editUser(id) {
@@ -971,6 +980,9 @@ function reportsPage() {
   const form = $("#report-form");
   $('[name="type"]', form).onchange = () => {
     const type = $('[name="type"]', form).value;
+    const from = $('[name="from"]', form);
+    from.min = type === "purchase-invoices" ? state.purchaseStart : state.started;
+    from.value = from.min;
     $('[name="supplierId"]', form).disabled = ![
       "orders",
       "purchases",
@@ -1065,6 +1077,7 @@ async function dispatch(action, id, element) {
     "edit-order": editOrder,
     "view-order": viewOrder,
     "new-purchase-invoice": newPurchaseInvoice,
+    "import-purchase-xml": importPurchaseXml,
     "view-purchase-invoice": viewPurchaseInvoice,
     "pay-purchase-invoice": confirmPurchasePayment,
     "invoice-history": invoiceHistory,
@@ -1167,9 +1180,9 @@ function purchaseInvoicesPage() {
     (i) => i.status === "Pendiente",
   );
   $("#content").innerHTML =
-    `${head("Facturas de compra", "Registra los comprobantes que recibes de tus proveedores.", isAdmin() ? button("＋ Registrar factura de compra", "new-purchase-invoice", "", "primary") : "")}
+    `${head("Facturas de compra", "Registra los comprobantes que recibes de tus proveedores.", isAdmin() ? `<div class="page-actions">${button("Registrar factura de compra", "new-purchase-invoice")}${button("Importar XML", "import-purchase-xml", "", "primary")}</div>` : "")}
     <div class="notice info"><div><b>${pending.length} facturas pendientes de pago · ${crc(pending.reduce((sum, i) => sum + i.total, 0))}</b><br>Una compra directa registra la entrada de mercadería. Una factura asociada a un pedido recibido conserva el inventario existente.</div></div>
-    ${filters(select("supplier", "Proveedor", [["", "Todos"], ...state.suppliers.map((s) => [s.id, s.name])]) + select("status", "Estado de pago", [["", "Todos"], "Pagada", "Pendiente"]) + field("from", "Desde", "", "date", `min="${state.started}" max="${state.today}"`) + field("to", "Hasta", "", "date", `min="${state.started}" max="${state.today}"`))}<div class="card" id="listing"></div>`;
+    ${filters(select("supplier", "Proveedor", [["", "Todos"], ...state.suppliers.map((s) => [s.id, s.name])]) + select("status", "Estado de pago", [["", "Todos"], "Pagada", "Pendiente"]) + field("from", "Desde", "", "date", `min="${state.purchaseStart}" max="${state.today}"`) + field("to", "Hasta", "", "date", `min="${state.purchaseStart}" max="${state.today}"`))}<div class="card" id="listing"></div>`;
   attachFilter((f) => {
     const rows = state.purchaseInvoices.filter(
       (i) =>
@@ -1194,7 +1207,7 @@ function purchaseInvoicesPage() {
         .reverse()
         .map((i) =>
           tr([
-            `<strong>${esc(i.invoiceNumber)}</strong><small>${idLabel("COM", i.id)}</small>`,
+            `<strong>${esc(i.invoiceNumber)}</strong><small>${idLabel("COM", i.id)}${i.xml ? " · XML " + esc(i.xml.version) : ""}</small>`,
             esc(i.supplier),
             date(i.date),
             crc(i.total),
@@ -1207,6 +1220,100 @@ function purchaseInvoicesPage() {
     );
   });
 }
+function importPurchaseXml() {
+  let xml = "", document, mappings = [], source = "", payment = "Pendiente", dueDate = "", notes = "";
+  const xmlAmount = (n) => new Intl.NumberFormat("es-CR", { maximumFractionDigits: 5 }).format(n);
+  function upload() {
+    openDialog("Importar factura del proveedor", `<form id="xml-upload" class="stack-gap">
+      <p>Selecciona el XML original que recibiste del proveedor. Podrás revisar el comprobante antes de registrarlo.</p>
+      <label class="xml-file field">Archivo XML<input name="file" type="file" accept=".xml,application/xml,text/xml" required><small>Factura electrónica de Costa Rica · 4.3 o 4.4 · UTF-8 · Hasta 1 MB</small></label>
+      <p class="form-help">Se admite mercadería en colones, cantidades enteras e IVA sin exoneración. Las facturas con otros impuestos o cargos requieren registro manual.</p>
+      <p class="error" role="alert"></p><div class="dialog-footer">${button("Cancelar", "close")}<button class="btn primary" type="submit">Revisar XML</button></div></form>`);
+    $("#xml-upload").onsubmit = async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget, btn = $('button[type="submit"]', form);
+      btn.disabled = true;
+      try {
+        const file = $('[name="file"]', form).files[0];
+        if (!file || file.size > 1024 * 1024) throw new Error("Selecciona un XML de hasta 1 MB.");
+        try { xml = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(await file.arrayBuffer()); }
+        catch { throw new Error("El archivo debe estar codificado en UTF-8."); }
+        document = await api("purchase-invoices/xml/preview", "POST", { xml });
+        mappings = document.items.map((i) => i.productId ?? "");
+        dueDate = document.dueDate;
+        review();
+      } catch (error) { $(".error", form).textContent = error.message; }
+      finally { btn.disabled = false; }
+    };
+  }
+  async function refresh() {
+    document = await api("purchase-invoices/xml/preview", "POST", { xml });
+    mappings = mappings.map((m, i) => m || document.items[i].productId || "");
+    review();
+  }
+  function review() {
+    const d = document, supplier = state.suppliers.find((s) => s.id === d.supplierId);
+    const products = state.products.filter((p) => p.active && p.offers.some((o) => o.supplierId === d.supplierId));
+    const orders = state.orders.filter((o) => o.supplierId === d.supplierId && o.status === "Recibido" && !state.purchaseInvoices.some((i) => i.orderId === o.id));
+    openDialog("Revisar factura XML", `<form id="xml-review" class="stack-gap">
+      <div class="xml-summary"><div><span class="eyebrow">Factura electrónica ${esc(d.version)}</span><h3>${esc(d.supplier.name)}</h3><span>${esc(d.supplier.identification)} · ${date(d.date)}</span><small>Consecutivo ${esc(d.invoiceNumber)}</small></div><div class="xml-total"><small>Total en colones</small><strong>${crc(d.total)}</strong><span>${d.items.length} líneas de detalle</span></div></div>
+      <div class="xml-provenance"><span>Clave: ${esc(d.key)}</span><span>Destinatario: ${d.receiver ? `${esc(d.receiver.name)} · ${esc(d.receiver.identification)}` : "No indicado en el XML"}</span></div>
+      ${supplier ? `<p class="form-help">Proveedor asociado: <b>${esc(supplier.name)}</b>${supplier.active ? "" : " · Inactivo: actívalo en Proveedores antes de importar."}</p>` : `<div class="notice"><div>Este emisor todavía no está registrado. Completa sus datos para continuar.<br><button type="button" class="btn small" id="xml-create-supplier">Registrar proveedor del XML</button></div></div>`}
+      <div class="section-heading"><h3>Asociar mercadería</h3><span>Verifica que las unidades y presentaciones coincidan.</span></div>
+      ${table(["Detalle del proveedor", "Cantidad", "Costo sin IVA", "Total", "Producto en SIPRO"], d.items.map((l, n) => tr([
+        `${esc(l.name)}<small>${esc(l.codes.join(" / ") || "Sin código comercial")} · ${esc(l.unit)}</small>`,
+        xmlAmount(l.qty), xmlAmount(l.price), xmlAmount(l.total),
+        `<div class="xml-mapping">${select(`mapping-${n}`, `Producto para línea ${n + 1}`, [["", "Seleccionar producto…"], ...products.map((p) => [p.id, `${p.code} · ${p.name} (${p.presentation})`])], mappings[n], 'required')}<button class="btn plain small" type="button" data-xml-product="${n}" ${supplier?.active ? "" : "disabled"}>Crear producto</button></div>`,
+      ])))}
+      <div class="xml-amounts"><span>Neto <b>${crc(d.subtotal)}</b></span><span>IVA <b>${crc(d.vat)}</b></span><span>Total <b>${crc(d.total)}</b></span></div>
+      <div class="form-grid">${select("orderId", "Entrada de mercadería", [["", "Compra directa · ingresar existencias"], ...orders.map((o) => [o.id, `${idLabel("PED", o.id)} · ya recibido`])], source)}${select("status", "Estado de pago", ["Pendiente", "Pagada"], payment)}${field("dueDate", "Fecha de vencimiento", dueDate, "date", `required min="${esc(d.date)}"`)}${field("notes", "Observaciones", notes, "text", 'maxlength="500"')}</div>
+      <p id="xml-stock-effect" class="form-help"></p>
+      <label class="xml-confirm"><input type="checkbox" name="confirmed" required> Revisé el destinatario, las unidades y los productos asociados a esta compra.</label>
+      <p class="form-help">Se conservará el XML original. Esta importación no verifica la firma electrónica ni envía una aceptación a Hacienda.</p>
+      <p class="error" role="alert"></p><div class="dialog-footer"><button class="btn" type="button" id="xml-other-file">Cambiar archivo</button><button class="btn primary" type="submit" ${supplier?.active ? "" : "disabled"}>Guardar factura e importar</button></div></form>`);
+    const form = $("#xml-review");
+    function remember() {
+      const data = new FormData(form);
+      mappings = d.items.map((_, i) => data.get(`mapping-${i}`));
+      source = data.get("orderId"); payment = data.get("status"); dueDate = data.get("dueDate"); notes = data.get("notes");
+      $("#xml-stock-effect").textContent = source
+        ? "El pedido ya está recibido: esta factura documentará la compra sin volver a sumar existencias. Deben coincidir productos y cantidades."
+        : "Al guardar se sumarán estas cantidades al inventario. Si ya recibiste la mercadería mediante un pedido, selecciónalo arriba.";
+      $('[name="dueDate"]', form).required = payment === "Pendiente";
+    }
+    form.onchange = remember;
+    remember();
+    $("#xml-other-file").onclick = () => { source = ""; payment = "Pendiente"; notes = ""; upload(); };
+    const createSupplier = $("#xml-create-supplier");
+    if (createSupplier) createSupplier.onclick = () => {
+      remember();
+      editSupplier(null, { ...d.supplier, days: d.creditDays, terms: d.creditDays ? "Crédito" : "Contado" }, refresh);
+    };
+    form.querySelectorAll("[data-xml-product]").forEach((btn) => btn.onclick = () => {
+      remember();
+      const index = Number(btn.dataset.xmlProduct), line = d.items[index];
+      editProduct(null, { code: line.codes[0] ?? "", name: line.name, presentation: line.unit, tax: line.tax,
+        offers: [{ supplierId: d.supplierId, cost: Math.max(0.01, Math.round(line.price * 100) / 100), delivery: 1 }] }, async (product) => {
+        mappings[index] = product.id;
+        await refresh();
+      });
+      // La entrada se hará al confirmar la factura; el alta de catálogo comienza en cero.
+      $('[name="stock"]', $("#edit-form")).readOnly = true;
+    });
+    form.onsubmit = async (e) => {
+      e.preventDefault(); remember();
+      const btn = $('button[type="submit"]', form); btn.disabled = true;
+      try {
+        const invoice = await api("purchase-invoices/xml", "POST", { xml, mappings, orderId: source, status: payment, dueDate, notes });
+        $("#modal").close(); await reload(); viewPurchaseInvoice(invoice.id);
+        toast("Factura importada. El XML original quedó guardado.");
+      } catch (error) { $(".error", form).textContent = error.message; }
+      finally { btn.disabled = !supplier?.active; }
+    };
+  }
+  upload();
+}
+
 function newPurchaseInvoice() {
   if (!state.suppliers.length)
     return toast("Primero registra un proveedor.", true);
@@ -1400,12 +1507,12 @@ function newPurchaseInvoice() {
   source();
 }
 function purchaseInvoiceContent(i) {
-  return `<div class="detail-grid"><div><small>Proveedor</small>${esc(i.supplier)}<br>${esc(i.supplierIdentification)}</div><div><small>Número de factura del proveedor</small>${esc(i.invoiceNumber)}</div><div><small>Fecha de emisión</small>${date(i.date)}</div><div><small>Estado de pago</small>${statusBadge(i.status)}<br>${i.status === "Pagada" ? `Pago registrado: ${date(i.paidDate)}` : `Vencimiento: ${date(i.dueDate)}`}</div><div><small>Origen</small>${i.orderId ? idLabel("PED", i.orderId) : "Compra directa con ingreso a inventario"}</div><div><small>Registro</small>${date(i.registered)} · ${esc(i.user)}</div></div>
+  return `${i.xml ? `<div class="xml-provenance"><b>Factura electrónica ${esc(i.xml.version)}</b><span>Clave: ${esc(i.xml.key)}</span><small>XML original conservado. La importación no valida su firma ni lo envía a Hacienda.</small></div>` : ""}<div class="detail-grid"><div><small>Proveedor</small>${esc(i.supplier)}<br>${esc(i.supplierIdentification)}</div><div><small>Número de factura del proveedor</small>${esc(i.invoiceNumber)}</div><div><small>Fecha de emisión</small>${date(i.date)}</div><div><small>Estado de pago</small>${statusBadge(i.status)}<br>${i.status === "Pagada" ? `Pago registrado: ${date(i.paidDate)}` : `Vencimiento: ${date(i.dueDate)}`}</div><div><small>Origen</small>${i.orderId ? idLabel("PED", i.orderId) : "Compra directa con ingreso a inventario"}</div><div><small>Registro</small>${date(i.registered)} · ${esc(i.user)}</div></div>
     ${table(
       ["Producto", "Cantidad", "Costo sin IVA", "Descuento", "IVA", "Total"],
       i.items.map((l) =>
         tr([
-          `${esc(l.name)}<small>${esc(l.code)}</small>`,
+          `${esc(l.name)}<small>${esc(l.code)}</small>${l.xmlDescription ? `<small>XML: ${esc(l.xmlDescription)} · ${esc(l.unit)}</small>` : ""}`,
           l.qty,
           crc(l.price),
           crc(l.discountAmount),
@@ -1420,7 +1527,7 @@ function viewPurchaseInvoice(id) {
   const i = state.purchaseInvoices.find((i) => i.id === Number(id));
   openDialog(
     `Compra ${idLabel("COM", i.id)}`,
-    `${purchaseInvoiceContent(i)}<p class="form-help">Registro interno del comprobante entregado por el proveedor. Conserva la factura original.</p><div class="dialog-footer">${isAdmin() && i.status === "Pendiente" ? button("Marcar como pagada", "pay-purchase-invoice", i.id) : ""}${button("Imprimir / guardar PDF", "print-purchase-invoice", i.id, "primary")}</div>`,
+    `${purchaseInvoiceContent(i)}<p class="form-help">Registro interno del comprobante entregado por el proveedor. Conserva la factura original.</p><div class="dialog-footer">${i.xml && isAdmin() ? `<a class="btn" href="/api/purchase-invoices/${i.id}/xml" download>Descargar XML original</a>` : ""}${isAdmin() && i.status === "Pendiente" ? button("Marcar como pagada", "pay-purchase-invoice", i.id) : ""}${button("Imprimir / guardar PDF", "print-purchase-invoice", i.id, "primary")}</div>`,
   );
 }
 function confirmPurchasePayment(id) {

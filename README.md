@@ -1,6 +1,6 @@
 # SIPRO — Sistema de Gestión de Pedidos a Proveedores
 
-Demostración funcional para un Mini Súper / Licorera, basada en **Proyecto de Sistemas.pdf** y en las pantallas del ZIP original. Incluye siete módulos conectados, datos persistentes y dos roles. Conserva el nombre, los productos iniciales y el cálculo de precios con IVA incluido de la propuesta de facturación original, con una nueva identidad visual orgánica.
+Demostración funcional para un Mini Súper / Licorera, basada en **Proyecto de Sistemas.pdf** y en las pantallas del ZIP original. Incluye siete módulos conectados, datos persistentes y dos roles. Conserva el nombre, los productos iniciales y el cálculo de precios con IVA incluido de la propuesta de facturación original, con una interfaz cálida y compacta para el trabajo diario.
 
 ## Ejecutar
 
@@ -9,12 +9,13 @@ Requisito: **Node.js 24 LTS o superior**, disponible en [nodejs.org](https://nod
 Desde la carpeta que contiene `package.json`:
 
 ```sh
+npm ci
 npm start
 ```
 
 Abre en tu navegador la dirección local del puerto **3000** (`127.0.0.1:3000`). Mantén la terminal abierta mientras utilizas el sistema. Detén el servidor con `Ctrl+C`.
 
-La aplicación utiliza módulos incluidos en Node.js y funciona sin Internet. `npm ci` instala únicamente las herramientas opcionales de pruebas de navegador. No abras el HTML con doble clic o Live Server: los formularios necesitan el servidor de SIPRO.
+La instalación inicial necesita Internet: `npm ci` instala el lector XML y las herramientas de prueba. Después, la aplicación funciona localmente sin Internet. No consulta ni envía documentos a Hacienda. No abras el HTML con doble clic o Live Server: los formularios necesitan el servidor de SIPRO.
 
 | Rol           | Usuario de demostración | Contraseña de demostración |
 | ------------- | ----------------------- | -------------------------- |
@@ -37,7 +38,7 @@ Estas cuentas contienen datos ficticios para la presentación. En **Usuarios** p
 
 ## Caja, ventas guardadas y tickets
 
-La interfaz utiliza un diseño orgánico en tonos salvia, crema y terracota, con formas suaves y superficies cálidas. La caja conserva menú lateral, atajos, tabla de artículos y panel de cobro. Conserva la identidad de SIPRO; no es una integración ni una reproducción oficial de Qupos.
+La interfaz utiliza tonos salvia y superficies claras, navegación agrupada por tarea, controles consistentes y columnas numéricas alineadas. Se redujeron las formas decorativas y las tarjetas de colores para dar prioridad a los datos. Las decisiones y fuentes consultadas están en [Diseño e importación XML](docs/DISENO-IMPORTACION-XML.md). La caja conserva menú lateral, atajos, tabla de artículos y panel de cobro. Conserva la identidad de SIPRO; no es una integración ni una reproducción oficial de Qupos.
 
 ![Pantalla de caja de SIPRO](docs/capturas/caja.png)
 
@@ -71,14 +72,28 @@ Puedes indicar **Pagada** o **Pendiente**, con fecha de vencimiento para compras
 
 En **Reportes**, selecciona **Facturas de compra** para consultar y exportar por fechas, proveedor y estado de pago. El reporte anterior **Compras recibidas** sigue mostrando exclusivamente recepciones de pedidos; no sumes ambos reportes como si fueran operaciones diferentes.
 
-Se registra la información del comprobante; conserva su PDF o documento original por separado. Esta versión no adjunta archivos, no edita/anula compras ya registradas ni gestiona pagos parciales. Revisa los datos antes de guardar.
+### Importar el XML del proveedor
+
+1. Como administrador, abre **Facturas de compra → Importar XML** y selecciona el archivo original del proveedor.
+2. Pulsa **Revisar XML**. Comprueba el emisor, destinatario, fecha, consecutivo, detalle e importes.
+3. El proveedor se identifica por su cédula. Si falta, **Registrar proveedor del XML** permite completar sus datos y volver a la revisión. Los productos se sugieren por código comercial; el código CABYS no se usa como código interno. Selecciona los productos correspondientes o usa **Crear producto** para completar el catálogo. El alta comienza con existencias en cero.
+4. Revisa que la **unidad y presentación** del proveedor equivalgan a las de tu catálogo. Elige compra directa o un pedido recibido y especifica el estado de pago. Por defecto queda pendiente: el XML no demuestra que hayas pagado.
+5. Marca la confirmación y pulsa **Guardar factura e importar**. La factura, su XML y los movimientos se conservan juntos en SQLite. El detalle permite **Descargar XML original**.
+
+Se admiten documentos `FacturaElectronica` de Costa Rica **4.3 y 4.4**, en **CRC**, UTF-8, de hasta **1 MB y 100 líneas**, con cantidades enteras e IVA sin exoneración. Se conservan los importes de origen hasta cinco decimales; los totales contables y la pantalla resumen muestran colones a dos decimales. Se comprueban las sumas y se rechazan claves/consecutivos duplicados. Se aceptan fechas anteriores al inicio de SIPRO, pero no futuras; el movimiento de inventario corresponde al día del registro.
+
+No se admiten mediante XML otras monedas, cantidades fraccionarias, otros cargos, impuestos distintos del IVA, exoneraciones, IVA devuelto, impuestos asumidos ni surtidos. El sistema explica el motivo sin guardar una compra parcial. No verifica firmas ni realiza aceptación fiscal ante Hacienda; es una importación administrativa, no una validación tributaria completa del XML.
+
+![Revisión de factura XML](docs/capturas/importacion-xml.png)
+
+Las facturas manuales no tienen un adjunto XML. Conserva sus documentos por separado. No se editan/anulan compras registradas ni se gestionan pagos parciales. Revisa los datos antes de guardar.
 
 ## Actualizar en tu PC conservando tus datos
 
 1. Detén SIPRO con `Ctrl+C` en la terminal.
 2. Haz una copia de seguridad de la carpeta **`data`** completa.
 3. Descarga el ZIP actualizado de GitHub y descomprímelo. Copia el contenido de `Web-main` sobre la carpeta anterior del proyecto, reemplazando los archivos de código. **Conserva tu carpeta `data`**: el ZIP no contiene una base de datos que debas sustituir.
-4. Ejecuta `npm start` desde esa carpeta y vuelve a iniciar sesión. Recarga el navegador para ver el nuevo diseño, **Facturas de compra** y **Ventas guardadas**.
+4. Ejecuta `npm ci` y después `npm start` desde esa carpeta y vuelve a iniciar sesión. Recarga el navegador para ver el nuevo diseño, **Facturas de compra** y **Ventas guardadas**.
 
 El formato anterior de la base se adapta automáticamente. No necesitas borrar datos, reinstalar Node ni volver a registrar usuarios, ventas o inventario.
 
@@ -109,7 +124,7 @@ La primera ejecución crea `data/sipro.sqlite` con tres proveedores, seis produc
 
 ## Verificación
 
-Pruebas de integración, sin instalar dependencias:
+Pruebas de integración, después de ejecutar `npm ci`:
 
 ```sh
 npm test
@@ -129,7 +144,7 @@ Si ya tienes Chromium en Linux:
 SIPRO_CHROMIUM=/usr/bin/chromium npm run test:browser
 ```
 
-La prueba de navegador usa registros temporales y genera capturas, un PDF y un Excel en `test-results/`, sin modificar los datos de la aplicación. En Linux, Playwright puede requerir bibliotecas del sistema; consulta su instalación oficial si no están presentes.
+Los recorridos de navegador incluyen importación XML, alta de proveedor/producto, descarga del original, persistencia y revisión móvil. Usan registros temporales y generan capturas, un PDF y un Excel en `test-results/`, sin modificar los datos de la aplicación. En Linux, Playwright puede requerir bibliotecas del sistema; consulta su instalación oficial si no están presentes.
 
 ## Estructura
 

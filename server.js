@@ -21,6 +21,8 @@ import {
   report,
 } from "./src/domain.js";
 
+import { XML_LIMIT, previewPurchaseXml, importPurchaseXml } from "./src/purchase-xml.js";
+
 const root = dirname(fileURLToPath(import.meta.url));
 const digest = (token) => createHash("sha256").update(token).digest("hex");
 const escape = (value) =>
@@ -106,15 +108,16 @@ export function createApp({
         }
         let body = {};
         if (method !== "GET") {
-          let raw = "",
-            length = 0;
+          const chunks = [];
+          let length = 0;
+          const limit = path.startsWith("/api/purchase-invoices/xml") ? XML_LIMIT * 2 : 100000;
           for await (const chunk of req) {
             length += chunk.length;
-            ensure(length <= 100000, "Solicitud demasiado grande.", 413);
-            raw += chunk;
+            ensure(length <= limit, "Solicitud demasiado grande.", 413);
+            chunks.push(chunk);
           }
           try {
-            body = JSON.parse(raw);
+            body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
           } catch {
             throw new AppError("JSON inválido.");
           }
@@ -205,6 +208,17 @@ export function createApp({
           }
           return send(200, result);
         }
+        if (path === "/api/purchase-invoices/xml/preview" && method === "POST")
+          return send(200, previewPurchaseXml(store.read(), user, body.xml));
+        const xmlDownload = path.match(/^\/api\/purchase-invoices\/(\d+)\/xml$/);
+        if (xmlDownload && method === "GET") {
+          admin(user);
+          const s = store.read(), invoice = find(s.purchaseInvoices, xmlDownload[1]);
+          const xml = s.purchaseInvoiceDocuments?.[invoice.id];
+          ensure(xml, "Esta factura no tiene un XML adjunto.", 404);
+          res.setHeader("Content-Disposition", `attachment; filename="factura-${invoice.invoiceNumber}.xml"`);
+          return send(200, xml, "application/xml; charset=utf-8");
+        }
         let match;
         const result = store.change((s) => {
           if (
@@ -228,6 +242,8 @@ export function createApp({
             return receiveOrder(s, user, match[1]);
           if (path === "/api/invoices" && method === "POST")
             return createInvoice(s, user, body);
+          if (path === "/api/purchase-invoices/xml" && method === "POST")
+            return importPurchaseXml(s, user, body);
           if (path === "/api/purchase-invoices" && method === "POST")
             return createPurchaseInvoice(s, user, body);
           if (

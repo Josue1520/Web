@@ -1,0 +1,95 @@
+import assert from "node:assert/strict";
+import { mkdtempSync, rmSync, mkdirSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { chromium } from "playwright";
+import { createApp } from "../server.js";
+import { invoiceXml } from "./xml-fixture.js";
+
+const dir = mkdtempSync(join(tmpdir(), "sipro-browser-xml-"));
+const { server } = createApp({ dbPath: join(dir, "test.sqlite") });
+await new Promise((r) => server.listen(0, "127.0.0.1", r));
+const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"],
+  ...(process.env.SIPRO_CHROMIUM ? { executablePath: process.env.SIPRO_CHROMIUM } : {}) });
+const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+page.setDefaultTimeout(10000);
+const errors = [];
+page.on("pageerror", (e) => errors.push(e.message));
+mkdirSync("test-results", { recursive: true });
+const dialog = () => page.getByRole("dialog");
+const getState = () => page.evaluate(async () => (await fetch("/api/state")).json());
+const xml = "\uFEFF" + invoiceXml({ identification: "3101999999", code: "AR-XML-01" });
+async function loadXml(text) {
+  await page.getByRole("button", { name: "Importar XML", exact: true }).click();
+  await dialog().getByLabel("Archivo XML").setInputFiles({ name: "factura.xml", mimeType: "application/xml", buffer: Buffer.from(text) });
+  await dialog().getByRole("button", { name: "Revisar XML" }).click();
+}
+try {
+  await page.goto(`http://127.0.0.1:${server.address().port}`);
+  await page.locator("#login-form").waitFor();
+  await page.screenshot({ path: "test-results/acceso.png", fullPage: true });
+  await page.getByLabel("Usuario", { exact: true }).fill("admin");
+  await page.getByLabel("Contraseña", { exact: true }).fill("Admin123!");
+  await page.getByRole("button", { name: "Ingresar al sistema" }).click();
+  await page.getByRole("navigation").getByRole("link", { name: "Facturas de compra", exact: true }).click();
+  await loadXml(xml);
+  await dialog().getByRole("heading", { name: "Revisar factura XML" }).waitFor();
+  assert.equal((await getState()).purchaseInvoices.length, 0);
+  await dialog().getByRole("button", { name: "Registrar proveedor del XML" }).click();
+  assert.equal(await dialog().getByLabel("Identificación", { exact: true }).inputValue(), "3101999999");
+  await dialog().getByLabel("Contacto principal").fill("Compras de prueba");
+  await dialog().getByRole("button", { name: "Guardar", exact: true }).click();
+  await dialog().getByRole("heading", { name: "Revisar factura XML" }).waitFor();
+  await dialog().getByRole("button", { name: "Crear producto", exact: true }).click();
+  assert.equal(await dialog().getByLabel("Existencia inicial").inputValue(), "0");
+  assert.equal(await dialog().getByLabel("Existencia inicial").getAttribute("readonly"), "");
+  await dialog().getByLabel("Categoría", { exact: true }).fill("Abarrotes");
+  await dialog().getByLabel("Precio de venta, IVA incluido (₡)").fill("150");
+  await dialog().getByRole("button", { name: "Guardar", exact: true }).click();
+  await dialog().getByRole("heading", { name: "Revisar factura XML" }).waitFor();
+  let state = await getState();
+  const product = state.products.find((p) => p.code === "AR-XML-01");
+  assert.equal(product.stock, 0);
+  assert.equal(state.purchaseInvoices.length, 0);
+  assert.equal(await dialog().getByLabel("Producto para línea 1").inputValue(), String(product.id));
+  assert.equal(await page.locator('#xml-review .form-grid').evaluate(e => e.scrollWidth <= e.clientWidth), true);
+  await page.setViewportSize({ width: 1440, height: 1200 });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await page.screenshot({ path: "test-results/xml-preview.png", fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await dialog().getByLabel("Estado de pago", { exact: true }).selectOption("Pagada");
+  await dialog().getByRole("checkbox").check();
+  await dialog().getByRole("button", { name: "Guardar factura e importar" }).click();
+  await dialog().getByRole("link", { name: "Descargar XML original" }).waitFor();
+  state = await getState();
+  assert.equal(state.products.find((p) => p.id === product.id).stock, 2);
+  assert.equal(state.purchaseInvoices[0].total, 214.7);
+  const downloadPromise = page.waitForEvent("download");
+  await dialog().getByRole("link", { name: "Descargar XML original" }).click();
+  const download = await downloadPromise;
+  assert.equal(readFileSync(await download.path(), "utf8"), xml);
+  await dialog().getByRole("button", { name: "Cerrar", exact: true }).click();
+  await page.reload();
+  await page.getByRole("button", { name: "Ver", exact: true }).waitFor();
+  await page.screenshot({ path: "test-results/compras-xml.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await loadXml(invoiceXml({ identification: "3101999999", code: "AR-XML-01", sequence: 2 }));
+  await dialog().getByRole("heading", { name: "Revisar factura XML" }).waitFor();
+  assert.equal(await dialog().getByLabel("Producto para línea 1").inputValue(), String(product.id));
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  await page.screenshot({ path: "test-results/xml-movil.png", fullPage: true });
+  await dialog().getByRole("button", { name: "Cambiar archivo" }).click();
+  await dialog().getByLabel("Archivo XML").setInputFiles({ name: "incorrecta.xml", mimeType: "application/xml", buffer: Buffer.from("<Factura>") });
+  await dialog().getByRole("button", { name: "Revisar XML" }).click();
+  await dialog().getByRole("alert").filter({ hasText: "no es un XML bien formado" }).waitFor();
+  assert.equal((await getState()).purchaseInvoices.length, 1);
+  assert.deepEqual(errors, []);
+  console.log("Navegador XML: archivo → proveedor → producto → vista previa → guardar → descargar original → persistencia → móvil y errores: OK");
+} catch (error) {
+  await page.screenshot({ path: "test-results/xml-fallo.png", fullPage: true });
+  throw error;
+} finally {
+  await browser.close();
+  await new Promise((r) => server.close(r));
+  rmSync(dir, { recursive: true, force: true });
+}

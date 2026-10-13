@@ -55,8 +55,10 @@ export const admin = (user) =>
   );
 export const publicUser = ({ password, ...user }) => user;
 export function snapshot(s, user) {
+  const { purchaseInvoiceDocuments, ...publicState } = s;
   return {
-    ...s,
+    ...publicState,
+    purchaseStart: s.purchaseInvoices.reduce((start, i) => i.date < start ? i.date : start, s.started),
     users: user.role === "Administrador" ? s.users.map(publicUser) : [],
     me: publicUser(user),
     today: today(),
@@ -105,7 +107,7 @@ export function saveEntity(s, user, kind, id, b) {
       old?.identification ?? text(b.identification, "Identificación");
     unique(list, "identification", identification, entityId);
     ensure(
-      ["Física", "Jurídica", "DIMEX"].includes(b.idType),
+      ["Física", "Jurídica", "DIMEX", "NITE"].includes(b.idType),
       "Tipo de identificación inválido.",
     );
     row = {
@@ -368,7 +370,9 @@ export function report(s, user, query) {
     "Reporte inválido.",
   );
   if (["profit", "inventory"].includes(type)) admin(user);
-  const from = query.get("from") || s.started,
+  const earliest = type === "purchase-invoices"
+    ? s.purchaseInvoices.reduce((start, i) => i.date < start ? i.date : start, s.started) : s.started;
+  const from = query.get("from") || earliest,
     to = query.get("to") || today();
   const validDate = (v) =>
     /^\d{4}-\d{2}-\d{2}$/.test(v) &&
@@ -377,10 +381,10 @@ export function report(s, user, query) {
   ensure(
     validDate(from) &&
       validDate(to) &&
-      from >= s.started &&
+      from >= earliest &&
       to <= today() &&
       from <= to,
-    `El período debe estar entre ${s.started} y ${today()}.`,
+    `El período debe estar entre ${earliest} y ${today()}.`,
   );
   const within = (v) => v >= from && v <= to;
   const supplierId = query.get("supplierId"),
@@ -533,7 +537,8 @@ export function report(s, user, query) {
 }
 
 // Factura externa de compra: distinta del comprobante de venta emitido por SIPRO.
-export function createPurchaseInvoice(s, user, b) {
+// xmlDocument solo procede del parser del servidor, nunca del cuerpo JSON.
+export function createPurchaseInvoice(s, user, b, xmlDocument = null) {
   admin(user);
   const supplier = find(s.suppliers, b.supplierId);
   const invoiceNumber = text(
@@ -555,7 +560,7 @@ export function createPurchaseInvoice(s, user, b) {
     !Number.isNaN(Date.parse(v)) &&
     new Date(v).toISOString().slice(0, 10) === v;
   ensure(
-    validDate(issued) && issued >= s.started && issued <= today(),
+    validDate(issued) && (xmlDocument || issued >= s.started) && issued <= today(),
     `La fecha debe estar entre ${s.started} y ${today()}.`,
   );
   const status = text(b.status, "Estado de pago");
@@ -588,21 +593,23 @@ export function createPurchaseInvoice(s, user, b) {
     "Agrega entre 1 y 100 productos.",
   );
   ensure(
-    new Set(b.items.map((i) => Number(i.productId))).size === b.items.length,
+    xmlDocument || new Set(b.items.map((i) => Number(i.productId))).size === b.items.length,
     "No repitas productos; agrúpalos en una línea.",
   );
   if (order)
     ensure(
-      b.items.length === order.items.length,
+      new Set(b.items.map((i) => Number(i.productId))).size === order.items.length,
       "La factura debe incluir todos los productos del pedido recibido.",
     );
-  const items = b.items.map((l) => {
+  const items = b.items.map((l, index) => {
     const p = find(s.products, l.productId);
     const qty = number(l.qty, "Cantidad", 1, 1000000, true);
     const orderLine = order?.items.find((i) => i.productId === p.id);
+    const receivedQty = xmlDocument
+      ? b.items.filter((i) => Number(i.productId) === p.id).reduce((sum, i) => sum + i.qty, 0) : qty;
     if (order)
       ensure(
-        orderLine && qty === orderLine.qty,
+        orderLine && receivedQty === orderLine.qty,
         "Las cantidades deben coincidir con el pedido recibido.",
       );
     else {
@@ -611,6 +618,11 @@ export function createPurchaseInvoice(s, user, b) {
         p.offers.some((o) => o.supplierId === supplier.id),
         `${p.name} no está asociado al proveedor.`,
       );
+    }
+    if (xmlDocument) {
+      const source = xmlDocument.items[index];
+      return { ...source, productId: p.id, code: p.code, name: p.name,
+        xmlDescription: source.name };
     }
     const price = money(number(l.price, "Costo unitario sin IVA", 0.01));
     const tax = number(l.tax, "IVA", 0, 100);
@@ -643,9 +655,9 @@ export function createPurchaseInvoice(s, user, b) {
     registered: today(),
     orderId: order?.id ?? null,
     items,
-    subtotal: money(items.reduce((sum, l) => sum + l.net, 0)),
-    vat: money(items.reduce((sum, l) => sum + l.vat, 0)),
-    total: money(items.reduce((sum, l) => sum + l.total, 0)),
+    subtotal: money(xmlDocument?.subtotal ?? items.reduce((sum, l) => sum + l.net, 0)),
+    vat: money(xmlDocument?.vat ?? items.reduce((sum, l) => sum + l.vat, 0)),
+    total: money(xmlDocument?.total ?? items.reduce((sum, l) => sum + l.total, 0)),
     status,
     dueDate,
     paidDate: status === "Pagada" ? today() : null,
@@ -653,12 +665,20 @@ export function createPurchaseInvoice(s, user, b) {
     user: user.username,
   };
   // Un pedido recibido ya movió existencias. Su factura solo documenta la compra.
-  if (!order)
+  if (!order) {
+    const entries = new Map();
     for (const l of items) {
+      const entry = entries.get(l.productId) ?? { productId: l.productId, qty: 0, net: 0 };
+      entry.qty += l.qty;
+      entry.net += l.net;
+      entries.set(l.productId, entry);
+    }
+    for (const l of entries.values()) {
       const p = find(s.products, l.productId);
       p.cost = money((p.stock * p.cost + l.net) / (p.stock + l.qty));
       movement(s, p, l.qty, `Compra ${invoiceNumber} · ${supplier.name}`, user);
     }
+  }
   s.purchaseInvoices.push(invoice);
   return invoice;
 }
