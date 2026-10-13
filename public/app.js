@@ -97,7 +97,7 @@ const statusBadge = (s) =>
 const button = (label, action, id = "", style = "") =>
   `<button type="button" class="btn ${style}" data-action="${action}" data-id="${id}">${label}</button>`;
 const table = (heads, rows, empty = "No hay registros para mostrar.") => {
-  const numeric = heads.map((h) => /^(Cantidad|Costo.*|Precio.*|Total|IVA|Descuento|Existencias|Stock.*|Mínimo|Subtotal|Entradas|Salidas|Utilidad.*)$/.test(h));
+  const numeric = heads.map((h) => /^(Cantidad|Costo.*|Precio.*|Total|IVA.*|Importe|Exonerado|Neto|Impuestos.*|Otros impuestos|Otros cargos|Descuento|Existencias|Stock.*|Mínimo|Subtotal|Entradas|Salidas|Utilidad.*)$/.test(h));
   return `<div class="table-wrap"><table><thead><tr>${heads.map((h, i) => `<th scope="col"${numeric[i] ? ' class="numeric"' : ""}>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.length ? rows.map((row) => {
     let i = 0;
     return row.replace(/<td>/g, () => `<td${numeric[i++] ? ' class="numeric"' : ""}>`);
@@ -147,16 +147,18 @@ function login() {
   };
 }
 function shell() {
-  const label = modules.find((m) => m[0] === currentPage)?.[1] || "Resumen";
-  $("#app").innerHTML =
-    `<div class="shell"><aside class="sidebar">${brand}<nav class="nav-links" aria-label="Módulos">${[
-      ["Operación", ["home", "invoices", "sales-history"]],
-      ["Compras", ["orders", "purchase-invoices", "suppliers"]],
-      ["Catálogo", ["products", "inventory"]],
-      ["Administración", ["reports", "users"]],
-    ].map(([group, keys]) => `<div class="nav-group"><div class="nav-caption">${group}</div>${keys
-      .filter((key) => key !== "users" || isAdmin())
-      .map((key) => `<a href="#${key}" class="${currentPage === key ? "active" : ""}" ${currentPage === key ? 'aria-current="page"' : ""}>${icon(key)}${modules.find((m) => m[0] === key)[1]}</a>`).join("")}</div>`).join("")}</nav><div class="sidebar-bottom"><b>Sistema de pedidos a proveedores</b><br>Mini súper / Licorera<br>Versión académica · 1.0</div></aside><div class="main-wrap"><header class="topbar"><div class="breadcrumb">Mi negocio &nbsp; / &nbsp; <strong>${label}</strong></div><div class="user-info"><div class="avatar">${esc(state.me.name[0])}${esc(state.me.surname[0])}</div><div><b>${esc(state.me.name)}</b><small>${esc(state.me.role)}</small></div>${button(`${icon("logout")} Salir`, "logout", "", "plain small")}</div></header><main class="content" id="content"></main></div></div>`;
+  const navigation = [
+    ["Operación", ["home", "invoices", "sales-history"]],
+    ["Abastecimiento", ["orders", "purchase-invoices", "suppliers"]],
+    ["Catálogo", ["products", "inventory"]],
+    ["Administración", ["reports", "users"]],
+  ].map(([group, keys]) => `<div class="nav-group"><span class="nav-caption">${group}</span><div>${keys
+    .filter((key) => key !== "users" || isAdmin())
+    .map((key) => `<a href="#${key}" class="${currentPage === key ? "active" : ""}" ${currentPage === key ? 'aria-current="page"' : ""}>${icon(key)}${modules.find((m) => m[0] === key)[1]}</a>`).join("")}</div></div>`).join("");
+  $("#app").innerHTML = `<div class="shell">
+    <header class="workspace-header"><div class="workspace-bar">${brand}<span class="business-label">Mini súper / Licorera</span><div class="user-info"><div class="avatar">${esc(state.me.name[0])}${esc(state.me.surname[0])}</div><div><b>${esc(state.me.name)}</b><small>${esc(state.me.role)}</small></div>${button(`${icon("logout")} Salir`, "logout", "", "plain small")}</div></div>
+    <nav class="nav-links" aria-label="Módulos">${navigation}</nav></header>
+    <div class="main-wrap"><main class="content" id="content"></main><footer class="workspace-footer"><span>SIPRO · Sistema de gestión</span><span>${date(state.today)} · Costa Rica</span></footer></div></div>`;
 }
 function render() {
   if (!state) return login();
@@ -168,6 +170,7 @@ function render() {
     (currentPage === "users" && !isAdmin())
   )
     currentPage = "home";
+  document.body.dataset.page = currentPage;
   shell();
   ({
     home: dashboard,
@@ -181,6 +184,13 @@ function render() {
     reports: reportsPage,
     users: usersPage,
   })[currentPage]();
+  const listing = $("#listing"), controls = $("#content > .filters");
+  if (listing && controls) {
+    const workspace = document.createElement("section");
+    workspace.className = "register-workspace";
+    controls.before(workspace);
+    workspace.append(controls, listing);
+  }
 }
 async function reload() {
   state = await api("state");
@@ -766,7 +776,7 @@ function saleTotals() {
 }
 function invoicesPage() {
   $("#content").innerHTML =
-    `${head("Facturación", "Punto de venta · Caja principal", button("Ver historial", "invoice-history"))}<div class="pos-toolbar"><button type="button" class="btn" data-action="focus-code"><kbd>F2</kbd> Ingresar código</button><button type="button" class="btn" data-action="focus-product"><kbd>F4</kbd> Buscar artículo</button><button type="button" class="btn" data-action="invoice-history"><kbd>F8</kbd> Facturas guardadas</button><button type="button" class="btn" data-action="focus-payment"><kbd>F9</kbd> Cobrar</button><a class="btn" href="#sales-history">Ventas guardadas →</a></div><form id="sale-form"><div class="sale-layout"><div><section class="card"><div class="card-header"><h2>Datos del cliente</h2><span class="badge">Nueva factura</span></div><div class="card-body form-grid">${field("customer", "Nombre del cliente", saleDraft.customer, "text", "required")}${field("identification", "Identificación (opcional)", saleDraft.identification)}<div class="wide">${field("notes", "Observaciones", saleDraft.notes)}</div></div></section><section class="card"><div class="card-header"><h2>Detalle de artículos</h2>${button("Vaciar", "clear-sale", "", "small")}</div><div class="card-body"><div class="pos-scan">${field("barcode", "Código de producto / lector de barras", "", "text", 'autocomplete="off" placeholder="Escanea o digita el código y presiona Enter"')}<button type="button" class="btn primary" id="scan-product">Ingresar código</button></div><div class="line-add">${select(
+    `${head("Facturación", "Punto de venta · Caja principal", button("Ver historial", "invoice-history"))}<div class="pos-toolbar"><button type="button" class="btn" data-action="focus-code"><kbd>F2</kbd> Ingresar código</button><button type="button" class="btn" data-action="focus-product"><kbd>F4</kbd> Buscar artículo</button><button type="button" class="btn" data-action="invoice-history"><kbd>F8</kbd> Facturas guardadas</button><button type="button" class="btn" data-action="focus-payment"><kbd>F9</kbd> Cobrar</button><a class="btn" href="#sales-history">Ventas guardadas →</a></div><form id="sale-form"><div class="sale-layout"><div class="sale-workspace"><section class="card sale-customer"><div class="card-header"><h2>Datos del cliente</h2><span class="badge">Nueva factura</span></div><div class="card-body form-grid">${field("customer", "Nombre del cliente", saleDraft.customer, "text", "required")}${field("identification", "Identificación (opcional)", saleDraft.identification)}<div class="wide">${field("notes", "Observaciones", saleDraft.notes)}</div></div></section><section class="card sale-items"><div class="card-header"><h2>Detalle de artículos</h2>${button("Vaciar", "clear-sale", "", "small")}</div><div class="card-body"><div class="pos-scan">${field("barcode", "Código de producto / lector de barras", "", "text", 'autocomplete="off" placeholder="Escanea o digita el código y presiona Enter"')}<button type="button" class="btn primary" id="scan-product">Ingresar código</button></div><div class="line-add">${select(
       "productId",
       "Buscar producto",
       state.products
@@ -1220,6 +1230,20 @@ function purchaseInvoicesPage() {
     );
   });
 }
+const taxName = (t) => ({ "01": "IVA", "02": "Selectivo de consumo", "03": "Combustibles", "04": "Bebidas alcohólicas", "05": "Bebidas envasadas y jabones", "06": "Tabaco", "07": "IVA · cálculo especial", "08": "IVA · bienes usados", "12": "Cemento", "99": t.description || "Otros impuestos" })[t.code] || `Impuesto ${t.code}`;
+function purchaseTaxDetail(i) {
+  return `<div class="purchase-financials"><div class="purchase-breakdown">${i.taxBreakdown?.length ? `<details class="tax-detail" open><summary>Desglose de impuestos y exoneraciones (${i.taxBreakdown.length})</summary>${table(["Impuesto", "Tarifa", "Importe", "Exonerado", "Neto"], i.taxBreakdown.map((t) => tr([
+    `${esc(taxName(t))}<small>Código ${esc(t.code)}</small>`, t.rate === null ? "Específico / factor" : `${t.rate}%`, crc(t.amount), crc(t.exonerated), crc(t.net),
+  ])))}</details>` : ""}
+  ${i.charges?.length ? `<section class="purchase-charges"><h3>Otros cargos del proveedor</h3>${table(["Concepto", "Tercero", "Importe"], i.charges.map((c) => tr([esc(c.description), esc(c.thirdParty || "—"), crc(c.amount)])))}</section>` : ""}
+  </div><div class="purchase-totals"><div class="total-line"><span>Subtotal neto</span><b>${crc(i.subtotal)}</b></div>
+  <div class="total-line"><span>IVA${i.taxBreakdown?.some((t) => t.exonerated) ? " tras exoneración" : ""}</span><span>${crc(i.vat)}</span></div>
+  ${i.otherTaxes ? `<div class="total-line"><span>Otros impuestos</span><span>${crc(i.otherTaxes)}</span></div>` : ""}
+  ${i.assumedTax ? `<div class="total-line"><span>Impuestos asumidos / de fábrica</span><span>− ${crc(i.assumedTax)}</span></div>` : ""}
+  ${i.chargesTotal ? `<div class="total-line"><span>Otros cargos</span><span>${crc(i.chargesTotal)}</span></div>` : ""}
+  ${i.vatRefund ? `<div class="total-line"><span>IVA devuelto</span><span>− ${crc(i.vatRefund)}</span></div>` : ""}
+  <div class="total-line grand"><span>Total del comprobante</span><span>${crc(i.total)}</span></div></div></div>`;
+}
 function importPurchaseXml() {
   let xml = "", document, mappings = [], source = "", payment = "Pendiente", dueDate = "", notes = "";
   const xmlAmount = (n) => new Intl.NumberFormat("es-CR", { maximumFractionDigits: 5 }).format(n);
@@ -1227,7 +1251,7 @@ function importPurchaseXml() {
     openDialog("Importar factura del proveedor", `<form id="xml-upload" class="stack-gap">
       <p>Selecciona el XML original que recibiste del proveedor. Podrás revisar el comprobante antes de registrarlo.</p>
       <label class="xml-file field">Archivo XML<input name="file" type="file" accept=".xml,application/xml,text/xml" required><small>Factura electrónica de Costa Rica · 4.3 o 4.4 · UTF-8 · Hasta 1 MB</small></label>
-      <p class="form-help">Se admite mercadería en colones, cantidades enteras e IVA sin exoneración. Las facturas con otros impuestos o cargos requieren registro manual.</p>
+      <p class="form-help">Importa IVA, impuestos específicos, exoneraciones, cargos y ajustes del proveedor. Se admite mercadería en colones con cantidades enteras.</p>
       <p class="error" role="alert"></p><div class="dialog-footer">${button("Cancelar", "close")}<button class="btn primary" type="submit">Revisar XML</button></div></form>`);
     $("#xml-upload").onsubmit = async (e) => {
       e.preventDefault();
@@ -1265,11 +1289,11 @@ function importPurchaseXml() {
         xmlAmount(l.qty), xmlAmount(l.price), xmlAmount(l.total),
         `<div class="xml-mapping">${select(`mapping-${n}`, `Producto para línea ${n + 1}`, [["", "Seleccionar producto…"], ...products.map((p) => [p.id, `${p.code} · ${p.name} (${p.presentation})`])], mappings[n], 'required')}<button class="btn plain small" type="button" data-xml-product="${n}" ${supplier?.active ? "" : "disabled"}>Crear producto</button></div>`,
       ])))}
-      <div class="xml-amounts"><span>Neto <b>${crc(d.subtotal)}</b></span><span>IVA <b>${crc(d.vat)}</b></span><span>Total <b>${crc(d.total)}</b></span></div>
+      ${purchaseTaxDetail(d)}
       <div class="form-grid">${select("orderId", "Entrada de mercadería", [["", "Compra directa · ingresar existencias"], ...orders.map((o) => [o.id, `${idLabel("PED", o.id)} · ya recibido`])], source)}${select("status", "Estado de pago", ["Pendiente", "Pagada"], payment)}${field("dueDate", "Fecha de vencimiento", dueDate, "date", `required min="${esc(d.date)}"`)}${field("notes", "Observaciones", notes, "text", 'maxlength="500"')}</div>
       <p id="xml-stock-effect" class="form-help"></p>
       <label class="xml-confirm"><input type="checkbox" name="confirmed" required> Revisé el destinatario, las unidades y los productos asociados a esta compra.</label>
-      <p class="form-help">Se conservará el XML original. Esta importación no verifica la firma electrónica ni envía una aceptación a Hacienda.</p>
+      <p class="form-help">El costo de inventario usa el neto de mercadería; impuestos y cargos se registran por separado. Se conserva el XML original. La importación no verifica su firma ni envía una aceptación a Hacienda.</p>
       <p class="error" role="alert"></p><div class="dialog-footer"><button class="btn" type="button" id="xml-other-file">Cambiar archivo</button><button class="btn primary" type="submit" ${supplier?.active ? "" : "disabled"}>Guardar factura e importar</button></div></form>`);
     const form = $("#xml-review");
     function remember() {
@@ -1509,19 +1533,19 @@ function newPurchaseInvoice() {
 function purchaseInvoiceContent(i) {
   return `${i.xml ? `<div class="xml-provenance"><b>Factura electrónica ${esc(i.xml.version)}</b><span>Clave: ${esc(i.xml.key)}</span><small>XML original conservado. La importación no valida su firma ni lo envía a Hacienda.</small></div>` : ""}<div class="detail-grid"><div><small>Proveedor</small>${esc(i.supplier)}<br>${esc(i.supplierIdentification)}</div><div><small>Número de factura del proveedor</small>${esc(i.invoiceNumber)}</div><div><small>Fecha de emisión</small>${date(i.date)}</div><div><small>Estado de pago</small>${statusBadge(i.status)}<br>${i.status === "Pagada" ? `Pago registrado: ${date(i.paidDate)}` : `Vencimiento: ${date(i.dueDate)}`}</div><div><small>Origen</small>${i.orderId ? idLabel("PED", i.orderId) : "Compra directa con ingreso a inventario"}</div><div><small>Registro</small>${date(i.registered)} · ${esc(i.user)}</div></div>
     ${table(
-      ["Producto", "Cantidad", "Costo sin IVA", "Descuento", "IVA", "Total"],
+      ["Producto", "Cantidad", "Costo neto", "Descuento", "Impuestos netos", "Total"],
       i.items.map((l) =>
         tr([
           `${esc(l.name)}<small>${esc(l.code)}</small>${l.xmlDescription ? `<small>XML: ${esc(l.xmlDescription)} · ${esc(l.unit)}</small>` : ""}`,
           l.qty,
           crc(l.price),
           crc(l.discountAmount),
-          `${crc(l.vat)}<small>${l.tax}%</small>`,
+          `${crc(l.taxTotal ?? l.vat)}<small>${l.taxes ? l.taxes.map((t) => esc(taxName(t))).join(" · ") : `${l.tax}% IVA`}</small>`,
           crc(l.total),
         ]),
       ),
     )}
-    <div class="total-line"><span>Subtotal sin IVA</span><b>${crc(i.subtotal)}</b></div><div class="total-line"><span>IVA</span><b>${crc(i.vat)}</b></div><div class="total-line grand"><span>Total</span><span>${crc(i.total)}</span></div><p>${esc(i.notes)}</p>`;
+    ${purchaseTaxDetail(i)}<p>${esc(i.notes)}</p>`;
 }
 function viewPurchaseInvoice(id) {
   const i = state.purchaseInvoices.find((i) => i.id === Number(id));

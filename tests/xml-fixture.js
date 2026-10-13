@@ -25,3 +25,14 @@ export function invoiceXml({ version = "4.4", date = "2026-01-15", identificatio
   </ResumenFactura>
 </FacturaElectronica>`;
 }
+
+export function taxedInvoiceXml(options = {}) {
+  return invoiceXml(options)
+    .replace("</Impuesto>", `<Exoneracion><TipoDocumentoEX1>01</TipoDocumentoEX1><NumeroDocumento>PRUEBA-EX-01</NumeroDocumento><NombreInstitucion>01</NombreInstitucion><FechaEmision>2025-01-01T00:00:00-06:00</FechaEmision><MontoExoneracion>4.7</MontoExoneracion></Exoneracion></Impuesto><Impuesto><Codigo>04</Codigo><DatosImpuestoEspecifico><CantidadUnidadMedida>2</CantidadUnidadMedida><ImpuestoUnidad>2.5</ImpuestoUnidad></DatosImpuestoEspecifico><Monto>5</Monto></Impuesto>`)
+    .replace("<ImpuestoAsumidoEmisorFabrica>0", "<ImpuestoAsumidoEmisorFabrica>3")
+    .replace("<ImpuestoNeto>24.7", "<ImpuestoNeto>22")
+    .replace("<MontoTotalLinea>214.7", "<MontoTotalLinea>212")
+    .replace("<ResumenFactura>", `<OtrosCargos><TipoDocumentoOC>99</TipoDocumentoOC><Detalle>Transporte de mercadería</Detalle><MontoCargo>10</MontoCargo></OtrosCargos><ResumenFactura>`)
+    .replace("<TotalImpuesto>24.7", "<TotalImpuesto>22")
+    .replace("<TotalComprobante>214.7", "<TotalImpAsumEmisorFabrica>3</TotalImpAsumEmisorFabrica><TotalIVADevuelto>2</TotalIVADevuelto><TotalOtrosCargos>10</TotalOtrosCargos><TotalComprobante>220");
+}

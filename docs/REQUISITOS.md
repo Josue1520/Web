@@ -69,10 +69,14 @@ Las pruebas comprueban cálculo de importes, entradas directas, ausencia de movi
 
 ## Ampliación solicitada: diseño e importación XML
 
-- Navegación por operación, compras, catálogo y administración; tablas con importes alineados y controles consistentes, manteniendo tonos cálidos y verde salvia.
+- Navegación superior por operación, abastecimiento, catálogo y administración; se recuperan el azul y blanco originales con una distribución nueva de caja, indicadores, tablas, acceso y formularios.
 - XML costarricense 4.3/4.4 con revisión previa, asociación por identificación del emisor y códigos comerciales; alta asistida de proveedor y productos faltantes.
 - Datos e importes reparsados por el servidor al guardar, prevención de duplicados por clave/consecutivo, transacción atómica y recuperación del XML original con hash SHA-256.
 - Las líneas repetidas del mismo producto conservan sus importes de origen; la entrada se agrupa por producto y se comprueban las cantidades totales al vincular un pedido.
-- Importación solo por administrador. XML de hasta 1 MB, CRC, cantidades enteras, IVA simple; rechazo de DTD/entidades, documentos dañados, formatos no admitidos e importes inconsistentes.
+- Importación solo por administrador. XML de hasta 1 MB, CRC, cantidades enteras, IVA e impuestos específicos, exoneraciones, impuestos asumidos, cargos e IVA devuelto; rechazo de DTD/entidades, documentos dañados, formatos no admitidos e importes inconsistentes.
 - No se valida la firma, el XSD completo ni la respuesta de Hacienda, y no se emite aceptación fiscal. [Fuentes, decisiones y límites](DISENO-IMPORTACION-XML.md).
 - Pruebas de API y navegador con datos sintéticos, sin firma fiscal, que verifican precisión, permisos, duplicados concurrentes, inventario, descarga idéntica del original UTF-8 (incluido BOM), persistencia y formularios móviles.
+
+- Los impuestos se conservan por código, tarifa e importe declarado. Las exoneraciones y ajustes se desglosan, sin tratar impuestos específicos como IVA porcentual. Se verifica `neto + impuestos netos + cargos − IVA devuelto = total`.
+- El reporte de compras y Excel incorporan otros impuestos, impuestos asumidos, impuestos netos, cargos e IVA devuelto. Las facturas antiguas se consultan sin migración destructiva.
+- El costo promedio mantiene la regla de neto de mercadería: no capitaliza automáticamente impuestos específicos ni fletes. Esta demostración no determina crédito fiscal ni costo tributario.

@@ -55,7 +55,7 @@ export function parsePurchaseXml(xml) {
       `XML: ${name} debe ser un número positivo con hasta cinco decimales.`);
     return Number(v);
   };
-  const equals = (a, b, label, tolerance = 0.00006) => ensure(Math.abs(a - b) <= tolerance,
+  const equals = (a, b, label, tolerance = 0.01) => ensure(Math.abs(a - b) <= tolerance,
     `XML: ${label} no coincide con el detalle. Solicita una factura corregida al proveedor.`);
   const key = value(root, "Clave"), invoiceNumber = value(root, "NumeroConsecutivo");
   ensure(/^\d{50}$/.test(key) && /^\d{20}$/.test(invoiceNumber) && key.slice(21, 41) === invoiceNumber,
@@ -80,9 +80,15 @@ export function parsePurchaseXml(xml) {
   const summary = one(root, "ResumenFactura"), currency = one(summary, "CodigoTipoMoneda");
   ensure(value(currency, "CodigoMoneda") === "CRC", "Solo se importan facturas en colones (CRC). Registra las otras monedas manualmente después de convertir sus importes.");
   equals(amount(currency, "TipoCambio"), 1, "el tipo de cambio");
-  ensure(!children(root, "OtrosCargos").length && !amount(summary, "TotalOtrosCargos", false) &&
-    !amount(summary, "TotalIVADevuelto", false) && !amount(summary, "TotalImpAsumEmisorFabrica", false),
-    "Esta factura incluye cargos, IVA devuelto o impuestos asumidos que requieren registro manual.");
+  const charges = children(root, "OtrosCargos").map((charge) => ({
+    code: value(charge, "TipoDocumentoOC", false) || value(charge, "TipoDocumento", false),
+    description: value(charge, "Detalle"), amount: amount(charge, "MontoCargo"),
+    percentage: value(charge, "Porcentaje", false),
+    thirdParty: value(charge, "NombreTercero", false),
+  }));
+  const chargesTotal = amount(summary, "TotalOtrosCargos", false);
+  equals(chargesTotal, charges.reduce((n, c) => n + c.amount, 0), "TotalOtrosCargos");
+  const vatRefund = amount(summary, "TotalIVADevuelto", false);
   const lines = children(one(root, "DetalleServicio"), "LineaDetalle");
   ensure(lines.length > 0 && lines.length <= 100, "Se admiten entre 1 y 100 líneas de mercadería.");
   const items = lines.map((line) => {
@@ -90,47 +96,78 @@ export function parsePurchaseXml(xml) {
     ensure(Number.isSafeInteger(lineNumber) && lineNumber > 0, "XML: número de línea inválido.");
     ensure(Number.isSafeInteger(qty) && qty > 0 && qty <= 1000000,
       `Línea ${lineNumber}: el inventario actual requiere cantidades enteras. Registra esta compra manualmente con una unidad compatible.`);
-    ensure(!children(line, "DetalleSurtido").length && !children(line, "IVACobradoFabrica").length &&
-      !amount(line, "ImpuestoAsumidoEmisorFabrica", false), `Línea ${lineNumber}: surtidos o impuestos de fábrica requieren registro manual.`);
+    ensure(!children(line, "DetalleSurtido").length, `Línea ${lineNumber}: los surtidos requieren desglosar sus productos antes de ingresarlos al inventario.`);
+    const factoryVat = value(line, "IVACobradoFabrica", false);
+    const assumedTax = amount(line, "ImpuestoAsumidoEmisorFabrica", false);
     const price = amount(line, "PrecioUnitario"), gross = amount(line, "MontoTotal"), net = amount(line, "SubTotal");
     ensure(price > 0, `Línea ${lineNumber}: el costo debe ser mayor que cero.`);
     const discountAmount = children(line, "Descuento").reduce((sum, d) => sum + amount(d, "MontoDescuento"), 0);
     ensure(discountAmount <= gross, `Línea ${lineNumber}: descuento superior al importe.`);
     equals(gross, qty * price, `el importe de la línea ${lineNumber}`);
     equals(net, gross - discountAmount, `el subtotal de la línea ${lineNumber}`);
-    const taxes = children(line, "Impuesto");
-    ensure(taxes.length <= 1, `Línea ${lineNumber}: varios impuestos requieren registro manual.`);
-    let tax = 0, vat = 0;
-    if (taxes.length) {
-      const t = taxes[0];
-      ensure(value(t, "Codigo") === "01" && !children(t, "Exoneracion").length,
-        `Línea ${lineNumber}: solo se admite IVA sin exoneración; registra otros impuestos manualmente.`);
-      tax = amount(t, "Tarifa"); vat = amount(t, "Monto");
-      ensure([0, 0.5, 1, 2, 4, 8, 13].includes(tax), `Línea ${lineNumber}: tarifa de IVA no admitida.`);
-      equals(vat, net * tax / 100, `el IVA de la línea ${lineNumber}`);
-    }
-    if (one(line, "BaseImponible", false)) equals(amount(line, "BaseImponible"), net, `la base imponible de la línea ${lineNumber}`);
-    if (one(line, "ImpuestoNeto", false)) equals(amount(line, "ImpuestoNeto"), vat, `el impuesto neto de la línea ${lineNumber}`);
+    // Se importan los montos declarados: impuestos específicos y bases compuestas
+    // no se pueden reconstruir aplicando un porcentaje único sobre SubTotal.
+    const taxes = children(line, "Impuesto").map((t) => {
+      const code = value(t, "Codigo"), taxAmount = amount(t, "Monto");
+      ensure(/^\d{2}$/.test(code), `Línea ${lineNumber}: código de impuesto inválido.`);
+      const exemption = one(t, "Exoneracion", false);
+      const exonerated = exemption ? amount(exemption, "MontoExoneracion") : 0;
+      ensure(exonerated <= taxAmount, `Línea ${lineNumber}: la exoneración supera el impuesto.`);
+      const rateText = value(t, "Tarifa", false);
+      return { code, description: value(t, "CodigoImpuestoOTRO", false),
+        rate: rateText ? amount(t, "Tarifa") : null,
+        amount: taxAmount, exonerated, net: Math.max(0, taxAmount - exonerated),
+        factor: value(t, "FactorCalculoIVA", false),
+        exemption: exemption ? {
+          document: value(exemption, "NumeroDocumento", false),
+          institution: value(exemption, "NombreInstitucion", false),
+          date: value(exemption, "FechaEmision", false),
+          rate: value(exemption, "TarifaExonerada", false) || value(exemption, "PorcentajeExoneracion", false),
+        } : null,
+      };
+    });
+    const isVat = (t) => ["01", "07", "08"].includes(t.code);
+    const vat = taxes.filter(isVat).reduce((n, t) => n + t.net, 0);
+    const otherTaxes = taxes.filter((t) => !isVat(t)).reduce((n, t) => n + t.net, 0);
+    const tax = taxes.find(isVat)?.rate ?? 0;
+    const calculatedTax = vat + otherTaxes - assumedTax;
+    ensure(calculatedTax >= -0.00001, `Línea ${lineNumber}: el impuesto asumido supera los impuestos netos.`);
+    const taxTotal = one(line, "ImpuestoNeto", false) ? amount(line, "ImpuestoNeto") : Math.max(0, calculatedTax);
+    equals(taxTotal, calculatedTax, `el impuesto neto de la línea ${lineNumber}`);
+    const taxableBase = one(line, "BaseImponible", false) ? amount(line, "BaseImponible") : net;
     const total = amount(line, "MontoTotalLinea");
-    equals(total, net + vat, `el total de la línea ${lineNumber}`);
+    equals(total, net + taxTotal, `el total de la línea ${lineNumber}`);
     const codes = children(line, "CodigoComercial").map((c) => value(c, "Codigo"));
     return { lineNumber, name: value(line, "Detalle"), codes, unit: value(line, "UnidadMedida"),
       cabys: value(line, namespaces.get(ns) === "4.4" ? "CodigoCABYS" : "Codigo", false),
-      qty, price, gross, discountAmount, discount: gross ? discountAmount / gross * 100 : 0, net, tax, vat, total };
+      qty, price, gross, discountAmount, discount: gross ? discountAmount / gross * 100 : 0,
+      net, tax, vat, otherTaxes, taxes, assumedTax, factoryVat, taxableBase, taxTotal, total };
   });
   ensure(new Set(items.map((i) => i.lineNumber)).size === items.length, "XML: números de línea repetidos.");
-  const subtotal = amount(summary, "TotalVentaNeta"), vat = amount(summary, "TotalImpuesto", false), total = amount(summary, "TotalComprobante");
+  const subtotal = amount(summary, "TotalVentaNeta"), taxTotal = amount(summary, "TotalImpuesto", false), total = amount(summary, "TotalComprobante");
   const sum = (key) => items.reduce((n, l) => n + l[key], 0);
   equals(amount(summary, "TotalVenta"), sum("gross"), "TotalVenta", 0.01);
   equals(amount(summary, "TotalDescuentos", false), sum("discountAmount"), "TotalDescuentos", 0.01);
   equals(subtotal, sum("net"), "TotalVentaNeta", 0.01);
-  equals(vat, sum("vat"), "TotalImpuesto", 0.01);
-  equals(total, subtotal + vat, "TotalComprobante", 0.01);
+  const vat = sum("vat"), otherTaxes = sum("otherTaxes"), assumedTax = sum("assumedTax");
+  equals(taxTotal, sum("taxTotal"), "TotalImpuesto");
+  if (one(summary, "TotalImpAsumEmisorFabrica", false))
+    equals(amount(summary, "TotalImpAsumEmisorFabrica"), assumedTax, "TotalImpAsumEmisorFabrica");
+  ensure(vatRefund <= vat + 0.01, "XML: el IVA devuelto supera el IVA del detalle.");
+  equals(total, subtotal + taxTotal + chargesTotal - vatRefund, "TotalComprobante");
+  const groupedTaxes = new Map();
+  for (const item of items) for (const t of item.taxes) {
+    const key = `${t.code}:${t.rate ?? ""}:${t.description}`;
+    const row = groupedTaxes.get(key) ?? { code: t.code, rate: t.rate, description: t.description, amount: 0, exonerated: 0, net: 0 };
+    row.amount += t.amount; row.exonerated += t.exonerated; row.net += t.net;
+    groupedTaxes.set(key, row);
+  }
+  const taxBreakdown = [...groupedTaxes.values()];
   const creditDays = amount(root, "PlazoCredito", false);
   ensure(Number.isSafeInteger(creditDays) && creditDays <= 365, "XML: plazo de crédito fuera del rango de 0 a 365 días.");
   const due = new Date(`${date}T12:00:00Z`); due.setUTCDate(due.getUTCDate() + creditDays);
   return { key, invoiceNumber, date, version: namespaces.get(ns), supplier, receiver: receiverInfo,
-    items, subtotal, vat, total, creditDays, dueDate: due.toISOString().slice(0, 10),
+    items, subtotal, vat, otherTaxes, taxTotal, assumedTax, taxBreakdown, charges, chargesTotal, vatRefund, total, creditDays, dueDate: due.toISOString().slice(0, 10),
     sha256: createHash("sha256").update(xml, "utf8").digest("hex") };
 }
 
@@ -167,7 +204,7 @@ export function importPurchaseXml(s, user, b) {
   }, document);
   invoice.xml = { key: document.key, version: document.version, sha256: document.sha256,
     receiver: document.receiver, supplierName: document.supplier.name,
-    subtotal: document.subtotal, vat: document.vat, total: document.total };
+    subtotal: document.subtotal, vat: document.vat, taxTotal: document.taxTotal, total: document.total };
   s.purchaseInvoiceDocuments ??= {};
   s.purchaseInvoiceDocuments[invoice.id] = b.xml;
   return invoice;

@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { createApp } from "../server.js";
 import { openStore, today } from "../src/store.js";
 import { parsePurchaseXml } from "../src/purchase-xml.js";
-import { invoiceXml } from "./xml-fixture.js";
+import { invoiceXml, taxedInvoiceXml } from "./xml-fixture.js";
 
 let app, base, cookie, dir;
 async function call(path, method = "GET", body) {
@@ -132,7 +132,7 @@ test("XML rechaza archivos dañados, DTD, importes incompatibles y formatos no a
     xml.replace("<TotalComprobante>214.7", "<TotalComprobante>214.8"),
     xml.replace("<SubTotal>190", "<SubTotal>191"),
     xml.replace("<CodigoMoneda>CRC", "<CodigoMoneda>USD"),
-    xml.replace("<Codigo>01</Codigo><CodigoTarifaIVA>", "<Codigo>02</Codigo><CodigoTarifaIVA>"),
+    xml.replace("<Codigo>01</Codigo><CodigoTarifaIVA>", "<Codigo>XYZ</Codigo><CodigoTarifaIVA>"),
     xml.replace("</Impuesto>", "<Exoneracion/></Impuesto>"),
     xml.replace("</ResumenFactura>", "<TotalOtrosCargos>50</TotalOtrosCargos></ResumenFactura>"),
     xml.replace("</TotalComprobante>", "</TotalComprobante><TotalComprobante>214.7</TotalComprobante>"),
@@ -165,4 +165,64 @@ test("asociación exige proveedor identificado, producto asociado, cantidad comp
   assert.equal((await call("purchase-invoices/xml/preview", "POST", { xml })).status, 403);
   assert.equal((await call("purchase-invoices/xml", "POST", importBody(xml))).status, 403);
   assert.equal((await call("purchase-invoices/1/xml")).status, 403);
+});
+
+test("impuestos múltiples, exoneración, asumidos, cargos e IVA devuelto se conservan y cuadran en reportes", async () => {
+  const xml = taxedInvoiceXml(), before = (await call("state")).body;
+  const preview = await call("purchase-invoices/xml/preview", "POST", { xml });
+  assert.equal(preview.status, 200, JSON.stringify(preview.body));
+  assert.equal(preview.body.vat, 20);
+  assert.equal(preview.body.otherTaxes, 5);
+  assert.equal(preview.body.assumedTax, 3);
+  assert.equal(preview.body.taxTotal, 22);
+  assert.equal(preview.body.chargesTotal, 10);
+  assert.equal(preview.body.vatRefund, 2);
+  assert.equal(preview.body.total, 220);
+  assert.equal(preview.body.items[0].taxes[0].exemption.document, "PRUEBA-EX-01");
+  assert.equal(preview.body.taxBreakdown[1].code, "04");
+  const saved = await call("purchase-invoices/xml", "POST", { ...importBody(xml), taxTotal: 0, chargesTotal: 0 });
+  assert.equal(saved.status, 201, JSON.stringify(saved.body));
+  assert.equal(saved.body.total, 220);
+  assert.equal(saved.body.charges[0].description, "Transporte de mercadería");
+  const after = (await call("state")).body;
+  assert.equal(after.products[0].stock, before.products[0].stock + 2);
+  assert.equal(after.products[0].cost, Math.round((before.products[0].cost * before.products[0].stock + 190) / after.products[0].stock * 100) / 100);
+  const report = (await call("reports?type=purchase-invoices")).body;
+  for (const [column, expected] of [["IVA tras exoneración", 20], ["Otros impuestos", 5], ["Impuestos asumidos", 3], ["Impuestos netos", 22], ["Otros cargos", 10], ["IVA devuelto", 2], ["Total", 220]])
+    assert.equal(report.rows[0][report.columns.indexOf(column)], expected);
+  assert.equal((await call(`purchase-invoices/${saved.body.id}/xml`)).body, xml);
+  const store = openStore(join(dir, "test.sqlite"));
+  assert.deepEqual(store.read().purchaseInvoices[0].taxBreakdown, saved.body.taxBreakdown);
+  store.close();
+});
+
+test("impuestos específicos y base compuesta se importan sin recalcularlos como IVA simple", () => {
+  const xml = invoiceXml()
+    .replace("<BaseImponible>190", "<BaseImponible>195")
+    .replace("<Monto>24.7", "<Monto>25.35")
+    .replace("</Impuesto>", "</Impuesto><Impuesto><Codigo>05</Codigo><Monto>5</Monto></Impuesto>")
+    .replace("<ImpuestoNeto>24.7", "<ImpuestoNeto>30.35")
+    .replace("<MontoTotalLinea>214.7", "<MontoTotalLinea>220.35")
+    .replace("<TotalImpuesto>24.7", "<TotalImpuesto>30.35")
+    .replace("<TotalComprobante>214.7", "<TotalComprobante>220.35");
+  const parsed = parsePurchaseXml(xml);
+  assert.equal(parsed.vat, 25.35);
+  assert.equal(parsed.otherTaxes, 5);
+  assert.equal(parsed.items[0].taxableBase, 195);
+  assert.equal(parsed.total, 220.35);
+  const factory = invoiceXml().replace("<ImpuestoAsumidoEmisorFabrica>", "<IVACobradoFabrica>01</IVACobradoFabrica><ImpuestoAsumidoEmisorFabrica>");
+  assert.equal(parsePurchaseXml(factory).items[0].factoryVat, "01");
+});
+
+test("rechaza exoneraciones, cargos y ajustes incongruentes sin inventario parcial", async () => {
+  const xml = taxedInvoiceXml(), before = (await call("state")).body;
+  for (const invalid of [
+    xml.replace("<MontoExoneracion>4.7", "<MontoExoneracion>100"),
+    xml.replace("<MontoCargo>10", "<MontoCargo>11"),
+    xml.replace("<ImpuestoAsumidoEmisorFabrica>3", "<ImpuestoAsumidoEmisorFabrica>100"),
+    xml.replace("<TotalImpAsumEmisorFabrica>3", "<TotalImpAsumEmisorFabrica>4"),
+    xml.replace("<TotalIVADevuelto>2", "<TotalIVADevuelto>99"),
+    xml.replace("<ImpuestoNeto>22", "<ImpuestoNeto>21"),
+  ]) assert.equal((await call("purchase-invoices/xml", "POST", importBody(invalid))).status, 400);
+  assert.deepEqual((await call("state")).body, before);
 });

@@ -14,8 +14,8 @@ El acceso directo al sitio de Carbon y al CDN de esquemas estuvo bloqueado desde
 
 La expresión «vibe coding» no es una categoría técnica verificable. Aquí se interpretó como evitar una presentación de plantilla con adornos repetidos que compiten con las tareas del negocio.
 
-- Mantener una paleta cálida y verde salvia, con superficies claras y bordes discretos. Sustituir los radios asimétricos, títulos serif, figuras decorativas y tarjetas de muchos colores por formas y tipografía consistentes.
-- Agrupar la navegación en operación, compras, catálogo y administración. Marcar la ubicación actual y mantener accesibles las acciones de cada módulo.
+- Recuperar los colores de la primera versión: azul #1f5a99, azul oscuro #153c66, blanco y fondo #f3f6fa. El usuario pidió sustituir el estilo salvia. Se eliminó el bloque del tema anterior y se creó un sistema visual de superficies planas, líneas divisorias y controles compactos.
+- Reemplazar el menú lateral por navegación superior agrupada. Mostrar indicadores en una franja y reunir filtros/tablas en una superficie de consulta. En caja, priorizar artículos, dejar cliente debajo y mantener cobro a la derecha. En móvil, la navegación y las tablas admiten desplazamiento horizontal sin desbordar la página.
 - Alinear importes y cantidades a la derecha, usar cifras tabulares y encabezados cortos. Los estados de pago combinan texto y color.
 - Dar a Facturas de compra dos acciones explícitas: registro manual e importación XML. La revisión muestra primero emisor, consecutivo y total; después el detalle y sus asociaciones; finalmente inventario y pago.
 - Solicitar una revisión de unidades/presentaciones y destinatario antes de importar. El catálogo no permite deducir automáticamente que una caja del proveedor equivale a una unidad de venta.
@@ -23,7 +23,7 @@ La expresión «vibe coding» no es una categoría técnica verificable. Aquí s
 
 ## Contrato de importación
 
-Solo administradores pueden revisar, importar y descargar XML. Se acepta `FacturaElectronica`, con namespace costarricense 4.3/4.4, colones, hasta 1 MB y 100 líneas de cantidades enteras. Se admiten IVA simple y descuentos monetarios; se mantienen los importes fuente hasta cinco decimales. Las comprobaciones aritméticas admiten 0,00006 de diferencia por línea y 0,01 en las sumas del encabezado, para redondeos. Los totales contables se redondean a dos decimales; el original queda disponible.
+Solo administradores pueden revisar, importar y descargar XML. Se acepta `FacturaElectronica`, con namespace costarricense 4.3/4.4, colones, hasta 1 MB y 100 líneas de cantidades enteras. Se admiten múltiples impuestos por línea, IVA y sus variantes, impuestos específicos (bebidas, tabaco, combustibles, etc.), otros impuestos declarados, exoneraciones, ajustes de fábrica/asumidos, cargos e IVA devuelto. Se mantienen los importes fuente hasta cinco decimales. Las comprobaciones aritméticas admiten hasta 0,01 de diferencia por línea y encabezado para redondeos; no se recalcula una tarifa tributaria desde el catálogo. Los totales contables se redondean a dos decimales; el original queda disponible.
 
 La vista previa no escribe datos. Al confirmar, el servidor vuelve a parsear el XML y reconstruye importes y proveedor; ignora totales o productos financieros enviados por el navegador. Las asociaciones se validan contra el catálogo actual. La importación rechaza un proveedor inactivo o un producto inactivo/no asociado.
 
@@ -35,7 +35,7 @@ Una compra directa suma existencias y actualiza costo promedio neto. Si un produ
 
 ## Límites explícitos
 
-No se aceptan mediante XML otras monedas, cantidades fraccionarias, exoneraciones, múltiples impuestos por línea, impuestos distintos del IVA, surtidos, IVA devuelto, impuestos de fábrica ni otros cargos. Tampoco tiquetes, notas de crédito/débito o mensajes de Hacienda. El rechazo explica el campo o función incompatible; no se elimina silenciosamente un cargo.
+No se aceptan mediante XML otras monedas, cantidades fraccionarias ni surtidos que necesitan descomposición de inventario. Tampoco tiquetes, notas de crédito/débito o mensajes de Hacienda. El rechazo explica el campo o función incompatible; no se elimina silenciosamente un cargo.
 
 La importación no valida el XSD completo, la firma digital, el estado de Hacienda ni la identidad legal del negocio receptor; el destinatario se presenta para revisión humana. No envía aceptación/rechazo fiscal, no emite facturas electrónicas y no realiza pagos. Las cuentas de demostración y fixtures no deben interpretarse como documentos fiscales.
 
@@ -44,3 +44,14 @@ El parser rechaza DTD/entidades, estructura ambigua en campos únicos, caractere
 ## Evidencia
 
 `npm test` prueba importación, precisión, formatos, prefijos de namespace, errores, duplicados concurrentes, permisos, inventario, persistencia y reportes históricos. `npm run test:browser` ejecuta los formularios de compra/venta e importación, altas asistidas, descarga idéntica del XML UTF-8 con BOM, revisión móvil y errores visibles. Los tests usan bases temporales y no modifican `data/`.
+
+
+## Ampliación de impuestos y cargos
+
+Se consultaron de nuevo las anotaciones del XSD 4.4 de CRLibre para `ImpuestoType`, `ExoneracionType`, `ImpuestoNeto`, `ImpuestoAsumidoEmisorFabrica`, `IVACobradoFabrica` y `TotalComprobante`. Los impuestos específicos pueden usar unidades, factores y bases compuestas; por eso el importador conserva el monto declarado en lugar de calcular todos como `subtotal × tarifa`.
+
+Por línea: impuestos netos = suma de impuestos menos exoneraciones menos impuestos asumidos/de fábrica. Se cotejan `ImpuestoNeto` y `MontoTotalLinea`. En el resumen: `TotalComprobante = TotalVentaNeta + TotalImpuesto + TotalOtrosCargos − TotalIVADevuelto`. Cada cargo conserva concepto, código, porcentaje e importe. La vista previa, el detalle, impresión de compras y Excel muestran los componentes por separado.
+
+El importe de IVA mostrado es posterior a exoneraciones y anterior al ajuste agregado de impuestos asumidos, que se resta en su propia fila; el desglose no atribuye ese ajuste a un impuesto particular sin información del emisor. No se calcula crédito fiscal ni validez de una exoneración. Los parámetros específicos permanecen en el XML original. El inventario se valora con neto de mercadería, sin distribuir impuestos ni cargos.
+
+Las pruebas incluyen un documento sintético con IVA, impuesto de bebidas, exoneración, impuesto asumido, transporte e IVA devuelto, otro con base imponible compuesta y casos inconsistentes rechazados sin cambios parciales. La captura del usuario permite identificar el rechazo anterior, pero no proporciona el contenido del XML real: todavía no se ha probado ese archivo específico.

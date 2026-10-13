@@ -1,6 +1,6 @@
 # SIPRO — Sistema de Gestión de Pedidos a Proveedores
 
-Demostración funcional para un Mini Súper / Licorera, basada en **Proyecto de Sistemas.pdf** y en las pantallas del ZIP original. Incluye siete módulos conectados, datos persistentes y dos roles. Conserva el nombre, los productos iniciales y el cálculo de precios con IVA incluido de la propuesta de facturación original, con una interfaz cálida y compacta para el trabajo diario.
+Demostración funcional para un Mini Súper / Licorera, basada en **Proyecto de Sistemas.pdf** y en las pantallas del ZIP original. Incluye siete módulos conectados, datos persistentes y dos roles. Conserva el nombre, los productos iniciales y el cálculo de precios con IVA incluido de la propuesta de facturación original, con una interfaz de operaciones en azul y blanco para el trabajo diario.
 
 ## Ejecutar
 
@@ -38,7 +38,7 @@ Estas cuentas contienen datos ficticios para la presentación. En **Usuarios** p
 
 ## Caja, ventas guardadas y tickets
 
-La interfaz utiliza tonos salvia y superficies claras, navegación agrupada por tarea, controles consistentes y columnas numéricas alineadas. Se redujeron las formas decorativas y las tarjetas de colores para dar prioridad a los datos. Las decisiones y fuentes consultadas están en [Diseño e importación XML](docs/DISENO-IMPORTACION-XML.md). La caja conserva menú lateral, atajos, tabla de artículos y panel de cobro. Conserva la identidad de SIPRO; no es una integración ni una reproducción oficial de Qupos.
+La interfaz recupera el **azul de la primera versión** (#1f5a99 y #153c66), con una distribución nueva: navegación superior agrupada, resumen en una franja de indicadores, buscadores integrados con sus tablas y formularios de superficies planas. La caja prioriza la entrada de artículos y coloca el cliente debajo; el panel de cobro permanece a la derecha en escritorio. Acceso, catálogo, compras, reportes y diálogos comparten el nuevo sistema visual. Las [decisiones y fuentes](docs/DISENO-IMPORTACION-XML.md) explican los cambios. Conserva la identidad de SIPRO; no es una integración ni una reproducción oficial de Qupos.
 
 ![Pantalla de caja de SIPRO](docs/capturas/caja.png)
 
@@ -80,9 +80,11 @@ En **Reportes**, selecciona **Facturas de compra** para consultar y exportar por
 4. Revisa que la **unidad y presentación** del proveedor equivalgan a las de tu catálogo. Elige compra directa o un pedido recibido y especifica el estado de pago. Por defecto queda pendiente: el XML no demuestra que hayas pagado.
 5. Marca la confirmación y pulsa **Guardar factura e importar**. La factura, su XML y los movimientos se conservan juntos en SQLite. El detalle permite **Descargar XML original**.
 
-Se admiten documentos `FacturaElectronica` de Costa Rica **4.3 y 4.4**, en **CRC**, UTF-8, de hasta **1 MB y 100 líneas**, con cantidades enteras e IVA sin exoneración. Se conservan los importes de origen hasta cinco decimales; los totales contables y la pantalla resumen muestran colones a dos decimales. Se comprueban las sumas y se rechazan claves/consecutivos duplicados. Se aceptan fechas anteriores al inicio de SIPRO, pero no futuras; el movimiento de inventario corresponde al día del registro.
+Se admiten documentos `FacturaElectronica` de Costa Rica **4.3 y 4.4**, en **CRC**, UTF-8, de hasta **1 MB y 100 líneas**, con cantidades enteras. Ahora incluye **IVA, impuestos específicos, varios impuestos por línea, exoneraciones, impuestos asumidos/de fábrica, otros cargos e IVA devuelto**. Se conservan los importes de origen hasta cinco decimales; los totales contables y la pantalla resumen muestran colones a dos decimales. Se comprueban las sumas y se rechazan claves/consecutivos duplicados. Se aceptan fechas anteriores al inicio de SIPRO, pero no futuras; el movimiento de inventario corresponde al día del registro.
 
-No se admiten mediante XML otras monedas, cantidades fraccionarias, otros cargos, impuestos distintos del IVA, exoneraciones, IVA devuelto, impuestos asumidos ni surtidos. El sistema explica el motivo sin guardar una compra parcial. No verifica firmas ni realiza aceptación fiscal ante Hacienda; es una importación administrativa, no una validación tributaria completa del XML.
+El detalle y la revisión muestran impuestos por código/tarifa, importes exonerados, cargos y ajustes separados; los reportes y Excel conservan el mismo desglose. El total sigue la fórmula: **neto + impuestos netos + cargos − IVA devuelto**. Se importan los impuestos declarados sin convertirlos todos a un porcentaje de IVA. El costo promedio de inventario usa el neto de mercadería; no distribuye impuestos ni cargos entre productos.
+
+No se admiten mediante XML otras monedas, cantidades fraccionarias ni surtidos de productos. El sistema explica el motivo sin guardar una compra parcial. No verifica firmas ni realiza aceptación fiscal ante Hacienda; es una importación administrativa, no una validación tributaria completa del XML.
 
 ![Revisión de factura XML](docs/capturas/importacion-xml.png)
 

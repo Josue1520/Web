@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright";
 import { createApp } from "../server.js";
-import { invoiceXml } from "./xml-fixture.js";
+import { invoiceXml, taxedInvoiceXml } from "./xml-fixture.js";
 
 const dir = mkdtempSync(join(tmpdir(), "sipro-browser-xml-"));
 const { server } = createApp({ dbPath: join(dir, "test.sqlite") });
@@ -18,7 +18,7 @@ page.on("pageerror", (e) => errors.push(e.message));
 mkdirSync("test-results", { recursive: true });
 const dialog = () => page.getByRole("dialog");
 const getState = () => page.evaluate(async () => (await fetch("/api/state")).json());
-const xml = "\uFEFF" + invoiceXml({ identification: "3101999999", code: "AR-XML-01" });
+const xml = "\uFEFF" + taxedInvoiceXml({ identification: "3101999999", code: "AR-XML-01" });
 async function loadXml(text) {
   await page.getByRole("button", { name: "Importar XML", exact: true }).click();
   await dialog().getByLabel("Archivo XML").setInputFiles({ name: "factura.xml", mimeType: "application/xml", buffer: Buffer.from(text) });
@@ -53,7 +53,9 @@ try {
   assert.equal(state.purchaseInvoices.length, 0);
   assert.equal(await dialog().getByLabel("Producto para línea 1").inputValue(), String(product.id));
   assert.equal(await page.locator('#xml-review .form-grid').evaluate(e => e.scrollWidth <= e.clientWidth), true);
-  await page.setViewportSize({ width: 1440, height: 1200 });
+  await dialog().getByText("Transporte de mercadería", { exact: true }).waitFor();
+  await dialog().getByText("Bebidas alcohólicas", { exact: false }).waitFor();
+  await page.setViewportSize({ width: 1440, height: 1600 });
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await page.screenshot({ path: "test-results/xml-preview.png", fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -63,7 +65,17 @@ try {
   await dialog().getByRole("link", { name: "Descargar XML original" }).waitFor();
   state = await getState();
   assert.equal(state.products.find((p) => p.id === product.id).stock, 2);
-  assert.equal(state.purchaseInvoices[0].total, 214.7);
+  assert.equal(state.purchaseInvoices[0].total, 220);
+  assert.equal(state.purchaseInvoices[0].taxTotal, 22);
+  await dialog().getByText("Transporte de mercadería", { exact: true }).waitFor();
+  await dialog().getByText("IVA devuelto", { exact: true }).waitFor();
+  await page.evaluate(() => { window.print = () => { window.__xmlPrinted = true; }; });
+  await dialog().getByRole("button", { name: "Imprimir / guardar PDF", exact: true }).click();
+  await page.waitForFunction(() => window.__xmlPrinted === true);
+  assert.ok((await page.locator("#print-area").textContent()).includes("Transporte de mercadería"));
+  assert.ok((await page.locator("#print-area").textContent()).includes("IVA devuelto"));
+  assert.ok(await page.locator("#print-area details").getAttribute("open") !== null);
+  await page.pdf({ path: "test-results/factura-xml-impuestos.pdf", preferCSSPageSize: true });
   const downloadPromise = page.waitForEvent("download");
   await dialog().getByRole("link", { name: "Descargar XML original" }).click();
   const download = await downloadPromise;
