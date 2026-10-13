@@ -1,6 +1,6 @@
 # SIPRO — Sistema de Gestión de Pedidos a Proveedores
 
-Demostración funcional para un Mini Súper / Licorera, basada en **Proyecto de Sistemas.pdf** y en las pantallas del ZIP original. Incluye siete módulos conectados, datos persistentes y dos roles. Conserva el nombre, los tonos azules, los productos iniciales y el cálculo de precios con IVA incluido de la propuesta de facturación original.
+Demostración funcional para un Mini Súper / Licorera, basada en **Proyecto de Sistemas.pdf** y en las pantallas del ZIP original. Incluye siete módulos conectados, datos persistentes y dos roles. Conserva el nombre, los productos iniciales y el cálculo de precios con IVA incluido de la propuesta de facturación original, con una nueva identidad visual orgánica.
 
 ## Ejecutar
 
@@ -37,11 +37,11 @@ Estas cuentas contienen datos ficticios para la presentación. En **Usuarios** p
 
 ## Caja, ventas guardadas y tickets
 
-La interfaz utiliza un diseño compacto de punto de venta: menú lateral, barra de herramientas, tabla de artículos y panel de cobro. Conserva la identidad de SIPRO; no es una integración ni una reproducción oficial de Qupos.
+La interfaz utiliza un diseño orgánico en tonos salvia, crema y terracota, con formas suaves y superficies cálidas. La caja conserva menú lateral, atajos, tabla de artículos y panel de cobro. Conserva la identidad de SIPRO; no es una integración ni una reproducción oficial de Qupos.
 
 ![Pantalla de caja de SIPRO](docs/capturas/caja.png)
 
-[Ver ejemplo de ticket de 80 mm](docs/capturas/ticket-80.png)
+[Ver pantalla de acceso](docs/capturas/acceso.png) · [Ver resumen del negocio](docs/capturas/resumen.png) · [Ver ejemplo de ticket de 80 mm](docs/capturas/ticket-80.png)
 
 - **Facturación:** ingresa productos por código o lector de barras que funcione como teclado y finalice con Enter. También puedes seleccionarlos del catálogo. Indica cantidades, descuento y forma de pago; pulsa **Emitir factura** para guardar la venta.
 - **Ventas guardadas:** consulta facturas por número, cliente, fechas y estado. Abre **Ver / reimprimir ticket** para imprimir comprobantes anteriores. Reimprimir no crea otra venta ni vuelve a descontar inventario.
