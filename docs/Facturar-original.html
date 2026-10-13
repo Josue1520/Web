@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facturación - SIPRO</title>
+<style>
+
+  /* ============================================================
+     1. TOKENS — colores, y valores reutilizados
+  ============================================================ */
+  :root{
+    --blue:     #1f5a99;
+    --blue-d:   #174777;   /* azul oscuro, hover/bordes fuertes */
+    --bg:       #e9ecf0;
+    --line:     #b9c1cb;   /* borde normal */
+    --line-l:   #d5dbe2;   /* borde suave, dentro de tablas */
+    --head:     #dde3ea;   /* fondo de encabezados/barras */
+    --ink:      #1c2530;   /* texto principal */
+    --muted:    #5d6b7a;   /* texto secundario */
+    --danger:   #b3261e;
+  }
+
+  *{ box-sizing:border-box }
+  html,body{ height:100%; margin:0 }
+  body{
+    font:13px/1.3 "Segoe UI",Tahoma,Arial,sans-serif;
+    background:var(--bg); color:var(--ink);
+    display:flex; flex-direction:column;
+  }
+  button,input,select{ font:inherit; color:inherit }
+  input,select{ height:26px; border:1px solid var(--line); background:#fff; padding:0 6px; border-radius:2px }
+  input:focus,select:focus{ outline:2px solid #7fa9d6; outline-offset:-1px; border-color:var(--blue) }
+  .num{ font-variant-numeric:tabular-nums } /* alinea dígitos en columnas de dinero */
+
+
+  /* ============================================================
+     2. BARRA SUPERIOR (marca / terminal / usuario / factura)
+  ============================================================ */
+  .titlebar{
+    background:var(--blue); color:#fff;
+    display:flex; align-items:center; gap:18px; padding:6px 12px;
+  }
+  .titlebar b{ font-size:15px; letter-spacing:.3px }
+  .titlebar span{ opacity:.9 }
+  .titlebar .r{ margin-left:auto; display:flex; gap:18px }
+
+
+  /* ============================================================
+     3. BARRA DE HERRAMIENTAS (acciones + atajos de teclado)
+  ============================================================ */
+  .toolbar{ display:flex; gap:4px; padding:6px 10px; background:var(--head); border-bottom:1px solid var(--line) }
+  .tb{
+    height:30px; padding:0 12px; border:1px solid var(--line);
+    background:linear-gradient(#fff,#eef1f5); border-radius:2px;
+    display:flex; align-items:center; gap:8px; cursor:pointer;
+  }
+  .tb:hover{ background:#fff; border-color:var(--blue) }
+  .tb i{ font-style:normal; font-size:11px; color:var(--muted); border-left:1px solid var(--line); padding-left:8px }
+  .tb:disabled{ opacity:.5; cursor:default }
+  .tb.cobrar{ background:var(--blue); border-color:var(--blue-d); color:#fff; margin-left:auto; font-weight:600 }
+  .tb.cobrar i{ color:#cfe0f3; border-color:#5b87b8 }
+  .tb.cobrar:hover{ background:var(--blue-d) }
+
+
+  /* ============================================================
+     4. CUERPO PRINCIPAL — cliente, escaneo, tabla, totales
+  ============================================================ */
+  main{ flex:1; min-height:0; display:flex; flex-direction:column; padding:8px 10px; gap:8px }
+
+  fieldset{ margin:0; border:1px solid var(--line); background:#f8f9fb; padding:6px 10px 8px }
+  legend{ padding:0 4px; color:var(--blue); font-weight:600 }
+
+  /* -- 4.1 Datos del cliente -- */
+  .cli{ display:flex; flex-wrap:wrap; gap:6px 18px; align-items:center }
+  .cli label{ display:flex; align-items:center; gap:6px; color:var(--muted) }
+  .cli input{ width:150px }
+  .cli #cname{ width:260px }
+
+  /* -- 4.2 Fila de escaneo de productos -- */
+  .scanrow{ display:flex; align-items:center; gap:8px }
+  .scanrow label{ font-weight:600 }
+  #barcode{ flex:0 1 360px; height:32px; font-size:16px; font-weight:600; border-color:var(--blue) }
+  #msg{ color:var(--danger); font-weight:600 }
+  .scanrow .cnt{ margin-left:auto; color:var(--muted) }
+
+  /* -- 4.3 Tabla de líneas de venta -- */
+  .grid{ flex:1; min-height:120px; overflow:auto; background:#fff; border:1px solid var(--line) }
+  table{ width:100%; border-collapse:collapse }
+  th{
+    position:sticky; top:0; background:var(--head); border:1px solid var(--line);
+    padding:5px 8px; font-weight:600; text-align:left; white-space:nowrap;
+  }
+  td{ border:1px solid var(--line-l); padding:0 8px; height:30px }
+  tbody tr:nth-child(even){ background:#f6f8fa }
+  tbody tr.sel{ background:#cfe2f7 !important; outline:1px solid var(--blue); outline-offset:-1px }
+  .r{ text-align:right } .c{ text-align:center }
+  td input{ width:64px; height:22px; text-align:center; font-weight:600 }
+  td input::-webkit-outer-spin-button, td input::-webkit-inner-spin-button{ -webkit-appearance:none }
+  .empty td{ height:120px; text-align:center; color:var(--muted); background:#fff }
+
+  /* -- 4.4 Observaciones + panel de totales -- */
+  .bottom{ display:flex; gap:8px; align-items:stretch }
+  .bottom fieldset{ flex:1 }
+  .bottom textarea{ width:100%; height:58px; resize:none; border:1px solid var(--line); border-radius:2px; padding:4px 6px; font:inherit }
+
+  .tot{ width:340px; border:1px solid var(--line); background:#f8f9fb }
+  .tot div{ display:flex; justify-content:space-between; padding:3px 10px; border-bottom:1px solid var(--line-l) }
+  .tot .grand{ background:#fff; border:0; border-top:1px solid var(--line); padding:6px 10px; align-items:baseline }
+  .tot .grand span{ font-weight:600 }
+  .tot .grand b{ font-size:28px; font-weight:700 }
+
+
+  /* ============================================================
+     5. BARRA DE ESTADO (pie de pantalla)
+  ============================================================ */
+  .status{ display:flex; gap:16px; padding:3px 12px; background:var(--head); border-top:1px solid var(--line); color:var(--muted); font-size:12px }
+
+
+  /* ============================================================
+     6. DIÁLOGO DE COBRO
+  ============================================================ */
+  dialog{ border:1px solid var(--blue-d); border-radius:3px; padding:0; width:min(480px,96vw); box-shadow:0 6px 24px rgba(0,0,0,.35) }
+  dialog::backdrop{ background:rgba(0,0,0,.35) }
+
+  .dh{ background:var(--blue); color:#fff; padding:6px 10px; font-weight:600; display:flex; justify-content:space-between }
+  .db{ padding:10px; display:grid; gap:8px; background:var(--bg) }
+  .db .row{ display:flex; justify-content:space-between; align-items:baseline; padding:4px 8px; background:#fff; border:1px solid var(--line) }
+  .db .row b{ font-size:22px }
+
+  .pr{ display:flex; gap:6px }                 /* selector de método + monto */
+  .pr select{ width:150px; height:30px }
+  .pr input{ flex:1; height:30px; font-size:16px; font-weight:600; text-align:right }
+
+  .btn{ height:30px; padding:0 14px; border:1px solid var(--line); background:linear-gradient(#fff,#eef1f5); border-radius:2px; cursor:pointer }
+  .btn:hover{ border-color:var(--blue) }
+  .btn.p{ background:var(--blue); border-color:var(--blue-d); color:#fff; font-weight:600 }
+  .btn:disabled{ opacity:.5; cursor:default }
+
+  .mini{ background:#fff; border:1px solid var(--line); min-height:64px }   /* lista de pagos agregados */
+  .mini table td, .mini table th{ height:24px; padding:0 8px }
+  .mini .x{ border:0; background:none; color:var(--danger); cursor:pointer; font-size:15px }
+
+  .sum{ background:#fff; border:1px solid var(--line) }                     /* resumen pagado/pendiente/vuelto */
+  .sum div{ display:flex; justify-content:space-between; padding:3px 8px; border-bottom:1px solid var(--line-l) }
+  .sum div:last-child{ border:0; font-weight:700; font-size:15px; background:#eef6ee }
+  .sum .pend b{ color:var(--danger) }
+
+  .df{ display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:var(--head); border-top:1px solid var(--line) }
+  .df label{ display:flex; gap:6px; align-items:center }
+  .df input{ height:auto }
+
+
+  /* ============================================================
+     7. RESPONSIVE
+  ============================================================ */
+  @media (max-width:820px){
+    .bottom{ flex-direction:column }
+    .tot{ width:100% }
+    .titlebar .r span:first-child{ display:none }
+    .tb i{ display:none }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============================================================
+       BARRA SUPERIOR
+  ============================================================ -->
+  <div class="titlebar">
+    <b>SIPRO</b><span>Facturación de ventas</span>
+    <div class="r">
+      <span>Terminal: CAJA-01</span>
+      <span>Usuario: Dennis Bustos</span>
+      <span>Factura N.° <b class="num" id="inv">004593</b></span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       BARRA DE HERRAMIENTAS
+  ============================================================ -->
+  <div class="toolbar">
+    <button class="tb" id="bCli">Clientes <i>F2</i></button>
+    <button class="tb" id="bScan">Buscar producto <i>F3</i></button>
+    <button class="tb" id="bDel">Quitar línea <i>Supr</i></button>
+    <button class="tb" id="bClear">Anular venta <i>F9</i></button>
+    <button class="tb cobrar" id="bPay">Procesar cobro <i>F12</i></button>
+  </div>
+
+  <!-- ============================================================
+       CUERPO PRINCIPAL
+  ============================================================ -->
+  <main>
+
+    <!-- Cliente -->
+    <fieldset>
+      <legend>Cliente</legend>
+      <div class="cli">
+        <label>Identificación <input id="cid" placeholder="Cédula / NIT"></label>
+        <label>Nombre <input id="cname" placeholder="Cliente de contado"></label>
+        <label>Condición
+          <select id="cond"><option>Contado</option><option>Crédito 30 días</option></select>
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- Escaneo de productos -->
+    <div class="scanrow">
+      <label for="barcode">Código</label>
+      <input id="barcode" autocomplete="off" autofocus placeholder="Escanear o digitar y Enter">
+      <span id="msg" role="alert"></span>
+      <span class="cnt" id="cnt"></span>
+    </div>
+
+    <!-- Tabla de líneas -->
+    <div class="grid">
+      <table>
+        <thead>
+          <tr>
+            <th class="c" style="width:40px">#</th>
+            <th style="width:110px">Código</th>
+            <th>Descripción</th>
+            <th class="c" style="width:90px">Cant.</th>
+            <th class="r" style="width:120px">Precio unit.</th>
+            <th class="r" style="width:110px">IVA 13%</th>
+            <th class="r" style="width:130px">Total</th>
+          </tr>
+        </thead>
+        <tbody id="rows"><!-- generado por render() --></tbody>
+      </table>
+    </div>
+
+    <!-- Observaciones + Totales -->
+    <div class="bottom">
+      <fieldset><legend>Observaciones</legend><textarea id="obs" placeholder="Opcional"></textarea></fieldset>
+      <div class="tot">
+        <div><span>Subtotal</span><span class="num" id="sub"></span></div>
+        <div><span>I.V.A.</span><span class="num" id="iva"></span></div>
+        <div class="grand"><span>TOTAL</span><b class="num" id="total"></b></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ============================================================
+       BARRA DE ESTADO
+  ============================================================ -->
+  <div class="status">
+    <span id="stLines">0 líneas</span>
+    <span>Enter: agregar código</span>
+    <span>Supr: quitar línea seleccionada</span>
+    <span style="margin-left:auto">Moneda: CRC ₡</span>
+  </div>
+
+  <!-- ============================================================
+       DIÁLOGO DE COBRO
+  ============================================================ -->
+  <dialog id="dlg">
+    <div class="dh"><span>Procesar pago</span><span>Factura <span id="dInv"></span></span></div>
+    <div class="db">
+      <div class="row"><span>Total a cobrar</span><b class="num" id="dTotal"></b></div>
+
+      <div class="pr">
+        <select id="method"><option>Efectivo</option><option>Tarjeta</option><option>SINPE Móvil</option></select>
+        <input id="amt" type="number" min="0" step="0.01" aria-label="Monto">
+        <button class="btn" id="addPay">Agregar</button>
+      </div>
+
+      <div class="mini">
+        <table>
+          <thead><tr><th>Forma de pago</th><th class="r">Monto</th><th style="width:30px"></th></tr></thead>
+          <tbody id="paid"><!-- generado por renderPay() --></tbody>
+        </table>
+      </div>
+
+      <div class="sum">
+        <div><span>Pagado</span><span class="num" id="sPaid"></span></div>
+        <div class="pend"><span>Pendiente</span><b class="num" id="sPend"></b></div>
+        <div><span>Vuelto</span><span class="num" id="sChange"></span></div>
+      </div>
+    </div>
+    <div class="df">
+      <label><input type="checkbox" id="print" checked> Imprimir tiquete</label>
+      <div style="display:flex;gap:6px">
+        <button class="btn" id="cancel">Cancelar (Esc)</button>
+        <button class="btn p" id="done" disabled>Facturar</button>
+      </div>
+    </div>
+  </dialog>
+
+
+<script>
+/* ================================================================
+   1. DATOS — catálogo de productos (sustituir por consulta real)
+================================================================ */
+const CATALOG = {
+  '74010020': { name: 'Cerveza Imperial Lata 350ml',    price: 1200 },
+  '74034412': { name: 'Ron Flor de Caña 4 Años 750ml',  price: 8500 },
+  '74050011': { name: 'Arroz Tío Pelón 1kg',             price: 1350 },
+  '74050022': { name: 'Leche Dos Pinos 1L',              price: 1100 },
+  '74050033': { name: 'Pan molde Bimbo',                 price: 1850 },
+};
+
+
+/* ================================================================
+   2. UTILIDADES
+================================================================ */
+const $ = (id) => document.getElementById(id);
+
+const fmt = (n) =>
+  '₡ ' + n.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const IVA_RATE = 0.13;
+
+
+/* ================================================================
+   3. ESTADO — todo lo mutable vive aquí
+================================================================ */
+const state = {
+  cart: [                                 // { code, qty }
+    { code: '74010020', qty: 24 },
+    { code: '74034412', qty: 1 },
+  ],
+  selected: 0,                            // fila seleccionada en la tabla
+  payments: [],                           // { method, amount }
+  invoiceNumber: 4593,
+};
+
+const cartTotal   = () => state.cart.reduce((sum, line) => sum + CATALOG[line.code].price * line.qty, 0);
+const amountPaid  = () => state.payments.reduce((sum, p) => sum + p.amount, 0);
+
+
+/* ================================================================
+   4. RENDER — pantalla principal (tabla, totales, contadores)
+================================================================ */
+function renderSale() {
+  $('rows').innerHTML = state.cart.length
+    ? state.cart.map(renderLine).join('')
+    : `<tr class="empty"><td colspan="7">Sin productos. Escanee o digite un código.</td></tr>`;
+
+  const total = cartTotal();
+  const subtotal = total / (1 + IVA_RATE);
+
+  $('sub').textContent   = fmt(subtotal);
+  $('iva').textContent   = fmt(total - subtotal);
+  $('total').textContent = fmt(total);
+
+  $('stLines').textContent = state.cart.length + (state.cart.length === 1 ? ' línea' : ' líneas');
+  $('cnt').textContent = state.cart.reduce((sum, l) => sum + l.qty, 0) + ' artículos';
+  $('bPay').disabled = !state.cart.length;
+}
+
+function renderLine(line, i) {
+  const product = CATALOG[line.code];
+  const unitNet = product.price / (1 + IVA_RATE);
+  const lineTotal = product.price * line.qty;
+
+  return `
+    <tr data-i="${i}" class="${i === state.selected ? 'sel' : ''}">
+      <td class="c">${i + 1}</td>
+      <td class="num">${line.code}</td>
+      <td>${product.name}</td>
+      <td class="c"><input type="number" min="1" value="${line.qty}" data-i="${i}" aria-label="Cantidad"></td>
+      <td class="r num">${fmt(unitNet)}</td>
+      <td class="r num">${fmt((product.price - unitNet) * line.qty)}</td>
+      <td class="r num"><b>${fmt(lineTotal)}</b></td>
+    </tr>`;
+}
+
+function showScanError(text) {
+  $('msg').textContent = text;
+}
+
+
+/* ================================================================
+   5. ACCIONES SOBRE LA VENTA — agregar / quitar / anular línea
+================================================================ */
+function addProductByCode() {
+  const code = $('barcode').value.trim();
+  if (!code) return;
+
+  if (!CATALOG[code]) {
+    showScanError('Código no encontrado: ' + code);
+    $('barcode').select();
+    return;
+  }
+  showScanError('');
+
+  const existingIndex = state.cart.findIndex((l) => l.code === code);
+  if (existingIndex >= 0) {
+    state.cart[existingIndex].qty++;
+    state.selected = existingIndex;
+  } else {
+    state.cart.push({ code, qty: 1 });
+    state.selected = state.cart.length - 1;
+  }
+
+  $('barcode').value = '';
+  renderSale();
+  $('rows').children[state.selected]?.scrollIntoView({ block: 'nearest' });
+}
+
+function removeSelectedLine() {
+  if (!state.cart.length) return;
+  state.cart.splice(state.selected, 1);
+  state.selected = Math.max(0, Math.min(state.selected, state.cart.length - 1));
+  renderSale();
+  $('barcode').focus();
+}
+
+function clearSale() {
+  if (!state.cart.length) return;
+  if (!confirm('¿Anular la venta actual?')) return;
+  state.cart = [];
+  state.selected = 0;
+  renderSale();
+  $('barcode').focus();
+}
+
+
+/* ================================================================
+   6. PANTALLA DE COBRO — pagos, vuelto, cierre de venta
+================================================================ */
+function renderPayment() {
+  const total = cartTotal();
+  const paid  = amountPaid();
+
+  $('dTotal').textContent = fmt(total);
+  $('dInv').textContent = String(state.invoiceNumber).padStart(6, '0');
+
+  $('paid').innerHTML = state.payments.length
+    ? state.payments.map(renderPaymentRow).join('')
+    : `<tr><td colspan="3" style="color:var(--muted)">Sin pagos registrados</td></tr>`;
+
+  $('sPaid').textContent   = fmt(paid);
+  $('sPend').textContent   = fmt(Math.max(total - paid, 0));
+  $('sChange').textContent = fmt(Math.max(paid - total, 0));
+
+  $('done').disabled = paid < total - 0.005;      // margen por redondeo de centavos
+  $('amt').value = Math.max(total - paid, 0).toFixed(2);
+}
+
+function renderPaymentRow(payment, i) {
+  return `
+    <tr>
+      <td>${payment.method}</td>
+      <td class="r num">${fmt(payment.amount)}</td>
+      <td><button class="x" data-i="${i}" aria-label="Quitar pago">×</button></td>
+    </tr>`;
+}
+
+function openPaymentDialog() {
+  if (!state.cart.length) return;
+  state.payments = [];
+  renderPayment();
+  $('dlg').showModal();
+  $('amt').select();
+}
+
+function addPayment() {
+  const amount = parseFloat($('amt').value);
+  if (!(amount > 0)) return;
+  state.payments.push({ method: $('method').value, amount });
+  renderPayment();
+  $('amt').select();
+}
+
+function completeSale() {
+  if ($('print').checked) window.print();
+
+  $('dlg').close();
+  state.cart = [];
+  state.payments = [];
+  state.selected = 0;
+  state.invoiceNumber++;
+
+  $('inv').textContent = String(state.invoiceNumber).padStart(6, '0');
+  $('cid').value = '';
+  $('cname').value = '';
+  $('obs').value = '';
+  renderSale();
+}
+
+
+/* ================================================================
+   7. EVENTOS — un solo lugar por elemento, sin lógica adentro
+================================================================ */
+
+// Barra de herramientas
+$('bCli').onclick   = () => $('cid').focus();
+$('bScan').onclick  = () => $('barcode').focus();
+$('bDel').onclick   = removeSelectedLine;
+$('bClear').onclick = clearSale;
+$('bPay').onclick   = openPaymentDialog;
+
+// Escaneo de código de barras
+$('barcode').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addProductByCode();
+  else showScanError('');
+});
+
+// Tabla de líneas: seleccionar fila / editar cantidad
+$('rows').addEventListener('click', (e) => {
+  const row = e.target.closest('tr[data-i]');
+  if (row && e.target.tagName !== 'INPUT') {
+    state.selected = +row.dataset.i;
+    renderSale();
+  }
+});
+$('rows').addEventListener('change', (e) => {
+  if (e.target.tagName !== 'INPUT') return;
+  const i = +e.target.dataset.i;
+  state.cart[i].qty = Math.max(1, parseInt(e.target.value) || 1);
+  state.selected = i;
+  renderSale();
+  $('barcode').focus();
+});
+
+// Diálogo de cobro
+$('addPay').onclick = addPayment;
+$('amt').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  amountPaid() >= cartTotal() - 0.005 ? $('done').click() : addPayment();
+});
+$('paid').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  state.payments.splice(+btn.dataset.i, 1);
+  renderPayment();
+});
+$('cancel').onclick = () => $('dlg').close();
+$('dlg').addEventListener('close', () => $('barcode').focus());
+$('done').onclick = completeSale;
+
+// Atajos de teclado globales
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'F12') { e.preventDefault(); openPaymentDialog(); }
+  if (e.key === 'F9')  { e.preventDefault(); clearSale(); }
+  if (e.key === 'F2')  { e.preventDefault(); $('cid').focus(); }
+  if (e.key === 'F3')  { e.preventDefault(); $('barcode').focus(); }
+
+  const isTyping = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+  if (e.key === 'Delete' && !isTyping) removeSelectedLine();
+
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && document.activeElement === $('barcode') && state.cart.length) {
+    e.preventDefault();
+    const dir = e.key === 'ArrowDown' ? 1 : -1;
+    state.selecbvted = Math.max(0, Math.min(state.cart.length - 1, state.selected + dir));
+    renderSale();
+  }
+});
+
+
+/* ================================================================
+   8. ARRANQUE
+================================================================ */
+renderSale();
+</script>
+</body>
+</html>
