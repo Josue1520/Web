@@ -33,7 +33,54 @@ Estas cuentas contienen datos ficticios para la presentación. En **Usuarios** p
 - **Facturación:** cliente, productos, descuento porcentual, IVA por producto, efectivo/tarjeta/SINPE, vuelto, consecutivo, historial y filtros. Anular requiere administrador y motivo; restaura las existencias una sola vez. Las facturas conservan los precios originales.
 - **Reportes:** pedidos, compras recibidas, productos solicitados, ventas, inventario actual y utilidad bruta estimada. Consulta por fechas, proveedor y estado cuando aplica; impresión/PDF y exportación a Excel para administradores.
 
-**PDF:** el botón de impresión abre el diálogo del navegador; selecciona **Guardar como PDF**. Permite reimprimir comprobantes históricos. **Excel:** se descarga un archivo `.xls` con contenido SpreadsheetML (XML de Excel); no es un CSV renombrado. Excel puede mostrar un aviso de compatibilidad por ser un formato XML antiguo; también se puede abrir en LibreOffice Calc.
+**PDF:** las ventas se imprimen como ticket de 80/58 mm; los reportes se imprimen en A4. El botón abre el diálogo del navegador; selecciona **Guardar como PDF**. Permite reimprimir comprobantes históricos. **Excel:** se descarga un archivo `.xls` con contenido SpreadsheetML (XML de Excel); no es un CSV renombrado. Excel puede mostrar un aviso de compatibilidad por ser un formato XML antiguo; también se puede abrir en LibreOffice Calc.
+
+## Caja, ventas guardadas y tickets
+
+La interfaz utiliza un diseño compacto de punto de venta: menú lateral, barra de herramientas, tabla de artículos y panel de cobro. Conserva la identidad de SIPRO; no es una integración ni una reproducción oficial de Qupos.
+
+![Pantalla de caja de SIPRO](docs/capturas/caja.png)
+
+[Ver ejemplo de ticket de 80 mm](docs/capturas/ticket-80.png)
+
+- **Facturación:** ingresa productos por código o lector de barras que funcione como teclado y finalice con Enter. También puedes seleccionarlos del catálogo. Indica cantidades, descuento y forma de pago; pulsa **Emitir factura** para guardar la venta.
+- **Ventas guardadas:** consulta facturas por número, cliente, fechas y estado. Abre **Ver / reimprimir ticket** para imprimir comprobantes anteriores. Reimprimir no crea otra venta ni vuelve a descontar inventario.
+- Atajos de caja: **F2** código, **F4** catálogo, **F8** historial, **F9** cobro y **F10** emitir factura (valida los campos antes de guardar). Los atajos se desactivan mientras hay un diálogo abierto.
+
+### Imprimir un ticket
+
+1. Emite una factura o abre una venta guardada.
+2. Selecciona **80 mm** o **58 mm** en **Ancho del ticket**. La preferencia queda en ese navegador; el valor inicial es 80 mm.
+3. Pulsa **Imprimir ticket** y elige tu impresora térmica instalada en Windows, macOS o Linux. También puedes seleccionar **Guardar como PDF**.
+4. Usa el ancho de rollo correspondiente, escala **100%**, sin encabezados ni pies de página del navegador. Si el controlador impone otro tamaño, selecciona el mismo ancho en sus preferencias.
+
+El ticket incluye número, fecha/hora (para ventas nuevas), cajero, cliente, productos, cantidades, precios, descuento, IVA, total, pago y vuelto. El largo del PDF se adapta al contenido. Las facturas anuladas se imprimen identificadas como **FACTURA ANULADA**. Los reportes y registros de facturas de proveedores mantienen su formato A4.
+
+La impresión utiliza el diálogo del navegador: no incluye impresión silenciosa, apertura de gaveta ni comandos de corte ESC/POS. Se verificó el contenido y tamaño de los PDF de 80/58 mm; la impresión física debe probarse con el modelo y controlador disponibles en tu PC.
+
+## Facturas de compra de proveedores
+
+En **Facturas de compra → Registrar factura de compra**, el administrador ingresa el número original de la factura, proveedor, fecha, productos, cantidades, costo unitario **sin IVA**, impuesto y descuento por línea. El sistema calcula el subtotal, IVA y total; comprueba que no se repita el mismo número para el mismo proveedor.
+
+Elige el origen correcto:
+
+- **Compra directa:** mercadería que ya recibiste sin un pedido registrado. Guardar la factura suma las cantidades al inventario y actualiza el costo promedio sin IVA, incluyendo el descuento. No uses esta opción si esa mercadería ya se ingresó al inventario.
+- **Pedido recibido:** selecciona el pedido previamente recibido del proveedor. Se cargan sus productos y cantidades; puedes ingresar los costos e impuestos del comprobante. Guardar la factura **no vuelve a sumar existencias ni modifica el costo promedio que dejó la recepción**. Cada pedido completo admite una factura; no se incluyen facturas parciales ni agrupación de varios pedidos.
+
+Puedes indicar **Pagada** o **Pendiente**, con fecha de vencimiento para compras a crédito. El detalle permite registrar el pago completo e imprimir/guardar el registro como PDF. El pago es un registro interno: no realiza una transferencia bancaria. El dependiente puede consultar las facturas, pero solo el administrador puede registrarlas o marcarlas como pagadas.
+
+En **Reportes**, selecciona **Facturas de compra** para consultar y exportar por fechas, proveedor y estado de pago. El reporte anterior **Compras recibidas** sigue mostrando exclusivamente recepciones de pedidos; no sumes ambos reportes como si fueran operaciones diferentes.
+
+Se registra la información del comprobante; conserva su PDF o documento original por separado. Esta versión no adjunta archivos, no edita/anula compras ya registradas ni gestiona pagos parciales. Revisa los datos antes de guardar.
+
+## Actualizar en tu PC conservando tus datos
+
+1. Detén SIPRO con `Ctrl+C` en la terminal.
+2. Haz una copia de seguridad de la carpeta **`data`** completa.
+3. Descarga el ZIP actualizado de GitHub y descomprímelo. Copia el contenido de `Web-main` sobre la carpeta anterior del proyecto, reemplazando los archivos de código. **Conserva tu carpeta `data`**: el ZIP no contiene una base de datos que debas sustituir.
+4. Ejecuta `npm start` desde esa carpeta y vuelve a iniciar sesión. Recarga el navegador para ver el nuevo diseño, **Facturas de compra** y **Ventas guardadas**.
+
+El formato anterior de la base se adapta automáticamente. No necesitas borrar datos, reinstalar Node ni volver a registrar usuarios, ventas o inventario.
 
 ## Demostración sugerida
 

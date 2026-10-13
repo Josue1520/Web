@@ -37,14 +37,16 @@ const paths = {
   logout: '<path d="M9 3H3v18h6M9 12h12m-5-5 5 5-5 5"/>',
 };
 const icon = (name) =>
-  `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.products}</svg>`;
+  `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || (["purchase-invoices", "sales-history"].includes(name) ? paths.invoices : paths.products)}</svg>`;
 const modules = [
   ["home", "Resumen"],
   ["suppliers", "Proveedores"],
   ["products", "Productos"],
   ["inventory", "Inventario"],
   ["orders", "Pedidos"],
+  ["purchase-invoices", "Facturas de compra"],
   ["invoices", "Facturación"],
+  ["sales-history", "Ventas guardadas"],
   ["reports", "Reportes"],
   ["users", "Usuarios"],
 ];
@@ -91,7 +93,7 @@ function toast(message, failure = false) {
   toastTimer = setTimeout(() => (el.className = ""), 5000);
 }
 const statusBadge = (s) =>
-  `<span class="badge ${["Activo", "Emitida", "Recibido", "Normal"].includes(s) ? "green" : ["Pendiente", "Bajo"].includes(s) ? "amber" : ["Agotado", "Anulada"].includes(s) ? "red" : "gray"}">${esc(s)}</span>`;
+  `<span class="badge ${["Activo", "Emitida", "Recibido", "Normal", "Pagada"].includes(s) ? "green" : ["Pendiente", "Bajo"].includes(s) ? "amber" : ["Agotado", "Anulada"].includes(s) ? "red" : "gray"}">${esc(s)}</span>`;
 const button = (label, action, id = "", style = "") =>
   `<button type="button" class="btn ${style}" data-action="${action}" data-id="${id}">${label}</button>`;
 const table = (heads, rows, empty = "No hay registros para mostrar.") =>
@@ -169,7 +171,9 @@ function render() {
     products: productsPage,
     inventory: inventoryPage,
     orders: ordersPage,
+    "purchase-invoices": purchaseInvoicesPage,
     invoices: invoicesPage,
+    "sales-history": savedSalesPage,
     reports: reportsPage,
     users: usersPage,
   })[currentPage]();
@@ -753,13 +757,13 @@ function saleTotals() {
 }
 function invoicesPage() {
   $("#content").innerHTML =
-    `${head("Facturación", "Registra ventas, consulta comprobantes y controla las existencias.", button("Ver historial", "invoice-history"))}<form id="sale-form"><div class="sale-layout"><div><section class="card"><div class="card-header"><h2>01 · Datos de la venta</h2><span class="badge">Nueva factura</span></div><div class="card-body form-grid">${field("customer", "Nombre del cliente", saleDraft.customer, "text", "required")}${field("identification", "Identificación (opcional)", saleDraft.identification)}<div class="wide">${field("notes", "Observaciones", saleDraft.notes)}</div></div></section><section class="card"><div class="card-header"><h2>02 · Productos</h2>${button("Vaciar", "clear-sale", "", "small")}</div><div class="card-body"><div class="line-add">${select(
+    `${head("Facturación", "Punto de venta · Caja principal", button("Ver historial", "invoice-history"))}<div class="pos-toolbar"><button type="button" class="btn" data-action="focus-code"><kbd>F2</kbd> Ingresar código</button><button type="button" class="btn" data-action="focus-product"><kbd>F4</kbd> Buscar artículo</button><button type="button" class="btn" data-action="invoice-history"><kbd>F8</kbd> Facturas guardadas</button><button type="button" class="btn" data-action="focus-payment"><kbd>F9</kbd> Cobrar</button><a class="btn" href="#sales-history">Ventas guardadas →</a></div><form id="sale-form"><div class="sale-layout"><div><section class="card"><div class="card-header"><h2>Datos del cliente</h2><span class="badge">Nueva factura</span></div><div class="card-body form-grid">${field("customer", "Nombre del cliente", saleDraft.customer, "text", "required")}${field("identification", "Identificación (opcional)", saleDraft.identification)}<div class="wide">${field("notes", "Observaciones", saleDraft.notes)}</div></div></section><section class="card"><div class="card-header"><h2>Detalle de artículos</h2>${button("Vaciar", "clear-sale", "", "small")}</div><div class="card-body"><div class="pos-scan">${field("barcode", "Código de producto / lector de barras", "", "text", 'autocomplete="off" placeholder="Escanea o digita el código y presiona Enter"')}<button type="button" class="btn primary" id="scan-product">Ingresar código</button></div><div class="line-add">${select(
       "productId",
       "Buscar producto",
       state.products
         .filter((p) => p.active && p.stock > 0)
         .map((p) => [p.id, `${p.code} · ${p.name} · ${crc(p.price)}`]),
-    )}${field("qty", "Cantidad", 1, "number", 'min="1" step="1"')}<button id="add-sale-line" type="button" class="btn primary">Agregar</button></div><p class="form-help">Los precios incluyen el IVA configurado para cada producto.</p></div><div id="cart-table"></div></section></div><aside class="card sale-summary"><div class="card-header"><h2>03 · Resumen y cobro</h2></div><div class="card-body"><div class="stack-gap">${field("discount", "Descuento (%)", saleDraft.discount, "number", 'required min="0" max="100" step="0.01"')}${select("payment", "Medio de pago", ["Efectivo", "Tarjeta", "SINPE"], saleDraft.payment)}<div id="cash-field">${field("paid", "Efectivo recibido (₡)", saleDraft.paid, "number", 'min="0" step="0.01"')}</div></div><div id="sale-totals"></div><p class="error" role="alert"></p><button type="submit" class="btn primary block" id="issue-invoice">Emitir factura ${icon("arrow")}</button><p class="form-help">Al emitir, la venta se guarda y las existencias se actualizan.</p></div></aside></div></form>`;
+    )}${field("qty", "Cantidad", 1, "number", 'min="1" step="1"')}<button id="add-sale-line" type="button" class="btn primary">Agregar</button></div><p class="form-help">Los precios incluyen el IVA configurado para cada producto.</p></div><div id="cart-table"></div></section></div><aside class="card sale-summary"><div class="card-header"><h2>Cobro de la venta</h2></div><div class="card-body"><div class="stack-gap">${field("discount", "Descuento (%)", saleDraft.discount, "number", 'required min="0" max="100" step="0.01"')}${select("payment", "Medio de pago", ["Efectivo", "Tarjeta", "SINPE"], saleDraft.payment)}<div id="cash-field">${field("paid", "Efectivo recibido (₡)", saleDraft.paid, "number", 'min="0" step="0.01"')}</div></div><div id="sale-totals"></div><p class="error" role="alert"></p><button type="submit" class="btn primary block" id="issue-invoice">Emitir factura · F10 ${icon("arrow")}</button><p class="form-help">La venta se guarda antes de imprimir el ticket.</p></div></aside></div></form>`;
   const form = $("#sale-form");
   function paintCart() {
     $("#cart-table").innerHTML = table(
@@ -810,6 +814,28 @@ function invoicesPage() {
     else cart.push({ productId: p.id, qty });
     $(".error", form).textContent = "";
     paintCart();
+  };
+  function scanProduct() {
+    const code = $('[name="barcode"]', form).value.trim();
+    const product = state.products.find(
+      (p) => p.code === code && p.active && p.stock > 0,
+    );
+    if (!product) {
+      $(".error", form).textContent =
+        "Código no encontrado o producto sin existencias.";
+      return;
+    }
+    $('[name="productId"]', form).value = product.id;
+    $("#add-sale-line").click();
+    if (!$(".error", form).textContent) $('[name="barcode"]', form).value = "";
+    $('[name="barcode"]', form).focus();
+  }
+  $("#scan-product").onclick = scanProduct;
+  $('[name="barcode"]', form).onkeydown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      scanProduct();
+    }
   };
   $("#cart-table").onchange = (e) => {
     if (e.target.dataset.saleLine !== undefined) {
@@ -889,27 +915,26 @@ function invoiceHistory() {
   $("#modal .filters").oninput = paint;
   paint();
 }
-function invoiceContent(i) {
-  return `<div class="detail-grid"><div><small>Cliente</small>${esc(i.customer)}<br>${esc(i.identification)}</div><div><small>Fecha y estado</small>${date(i.date)} · ${esc(i.status)}</div></div>${table(
-    ["Código / producto", "Cant.", "Precio con IVA", "Desc.", "IVA", "Total"],
-    i.items.map((l) =>
-      tr([
-        `${esc(l.name)}<small>${esc(l.code)}</small>`,
-        l.qty,
-        crc(l.price),
-        crc(l.discount),
-        crc(l.vat),
-        crc(l.total),
-      ]),
-    ),
-  )}<div class="total-line"><span>Subtotal sin IVA</span><b>${crc(i.subtotal)}</b></div><div class="total-line"><span>IVA</span><b>${crc(i.vat)}</b></div><div class="total-line grand"><span>Total</span><span>${crc(i.total)}</span></div><p>Pago: ${esc(i.payment)} · Recibido: ${crc(i.paid)} · Vuelto: ${crc(i.change)}</p><p>${esc(i.notes)}</p>${i.status === "Anulada" ? `<div class="notice">Anulada el ${date(i.voidDate)} por ${esc(i.voidUser)}. Motivo: ${esc(i.reason)}</div>` : ""}`;
-}
 function viewInvoice(id) {
   const i = state.invoices.find((i) => i.id === Number(id));
   openDialog(
     idLabel("FAC", i.id),
-    `${invoiceContent(i)}<p class="form-help">Comprobante académico de venta. No es una factura electrónica de Hacienda.</p><div class="dialog-footer">${isAdmin() && i.status === "Emitida" ? button("Anular factura", "void-invoice", i.id, "danger") : ""}${button("Imprimir / guardar PDF", "print-invoice", i.id, "primary")}</div>`,
+    `<div class="ticket-layout"><div id="ticket-preview">${ticketContent(i, receiptWidth())}</div><aside class="ticket-actions"><span class="badge green">Venta guardada</span><h3>Comprobante de venta</h3><p>La factura se conserva en Ventas guardadas. Puedes consultar e imprimir este ticket cuando lo necesites.</p>${select(
+      "ticketWidth",
+      "Ancho del ticket",
+      [
+        [80, "80 mm"],
+        [58, "58 mm"],
+      ],
+      receiptWidth(),
+    )}<p class="form-help">Selecciona tu impresora térmica o guarda el ticket como PDF. Imprime a escala 100%, sin encabezados ni pies del navegador.</p>${button("Imprimir ticket", "print-invoice", i.id, "primary block")}${isAdmin() && i.status === "Emitida" ? button("Anular factura", "void-invoice", i.id, "danger block") : ""}<p class="form-help">Comprobante académico; no es factura electrónica de Hacienda.</p></aside></div>`,
   );
+  $('[name="ticketWidth"]').onchange = (e) => {
+    try {
+      localStorage.setItem("sipro-ticket-width", e.target.value);
+    } catch {}
+    $("#ticket-preview").innerHTML = ticketContent(i, Number(e.target.value));
+  };
 }
 function voidInvoiceForm(id) {
   editForm(
@@ -919,6 +944,8 @@ function voidInvoiceForm(id) {
   );
 }
 function printDocument(title, content) {
+  document.body.removeAttribute("data-print-format");
+  $("#ticket-page-style")?.remove();
   $("#print-area").innerHTML =
     `<div class="print-heading"><div><h1>SIPRO</h1><p>Mini súper / Licorera</p></div><div><h2>${esc(title)}</h2><p>${date(state.today)}</p></div></div>${content}<p class="print-note">SIPRO · Demostración académica. Comprobante interno sin validez de factura electrónica.</p>`;
   window.print();
@@ -927,6 +954,7 @@ function reportsPage() {
   const types = [
     ["orders", "Pedidos"],
     ["purchases", "Compras recibidas"],
+    ["purchase-invoices", "Facturas de compra"],
     ["requested", "Productos solicitados"],
     ["sales", "Ventas"],
     ...(isAdmin()
@@ -946,13 +974,16 @@ function reportsPage() {
     $('[name="supplierId"]', form).disabled = ![
       "orders",
       "purchases",
+      "purchase-invoices",
       "requested",
     ].includes(type);
     $('[name="status"]', form).innerHTML = options([
       ["", "Todos"],
-      ...(type === "sales"
-        ? ["Emitida", "Anulada"]
-        : ["Pendiente", "Recibido"]),
+      ...(type === "purchase-invoices"
+        ? ["Pagada", "Pendiente"]
+        : type === "sales"
+          ? ["Emitida", "Anulada"]
+          : ["Pendiente", "Recibido"]),
     ]);
     $('[name="status"]', form).disabled = [
       "inventory",
@@ -1001,6 +1032,14 @@ function reportsPage() {
 }
 async function dispatch(action, id, element) {
   if (action === "close") return $("#modal").close();
+  if (action === "focus-code") return $('[name="barcode"]')?.focus();
+  if (action === "focus-product") return $('[name="productId"]')?.focus();
+  if (action === "focus-payment")
+    return (
+      $('[name="paid"]:not(:disabled)')?.closest("[hidden]")
+        ? $('[name="payment"]')
+        : $('[name="paid"]')
+    )?.focus();
   if (action === "logout") {
     await api("logout", "POST");
     state = null;
@@ -1025,6 +1064,9 @@ async function dispatch(action, id, element) {
     "adjust-stock": adjustStock,
     "edit-order": editOrder,
     "view-order": viewOrder,
+    "new-purchase-invoice": newPurchaseInvoice,
+    "view-purchase-invoice": viewPurchaseInvoice,
+    "pay-purchase-invoice": confirmPurchasePayment,
     "invoice-history": invoiceHistory,
     "view-invoice": viewInvoice,
     "void-invoice": voidInvoiceForm,
@@ -1065,9 +1107,16 @@ async function dispatch(action, id, element) {
     $("#modal").close();
     return invoicesPage();
   }
+  if (action === "print-purchase-invoice") {
+    const invoice = state.purchaseInvoices.find((i) => i.id === Number(id));
+    return printDocument(
+      `Registro de compra ${idLabel("COM", invoice.id)}`,
+      purchaseInvoiceContent(invoice),
+    );
+  }
   if (action === "print-invoice") {
     const i = state.invoices.find((i) => i.id === Number(id));
-    return printDocument(idLabel("FAC", i.id), invoiceContent(i));
+    return printTicket(i);
   }
   if (action === "print-report" && currentReport) {
     return printDocument(
@@ -1112,3 +1161,407 @@ window.addEventListener("hashchange", () => {
     login();
   }
 })();
+
+function purchaseInvoicesPage() {
+  const pending = state.purchaseInvoices.filter(
+    (i) => i.status === "Pendiente",
+  );
+  $("#content").innerHTML =
+    `${head("Facturas de compra", "Registra los comprobantes que recibes de tus proveedores.", isAdmin() ? button("＋ Registrar factura de compra", "new-purchase-invoice", "", "primary") : "")}
+    <div class="notice info"><div><b>${pending.length} facturas pendientes de pago · ${crc(pending.reduce((sum, i) => sum + i.total, 0))}</b><br>Una compra directa registra la entrada de mercadería. Una factura asociada a un pedido recibido conserva el inventario existente.</div></div>
+    ${filters(select("supplier", "Proveedor", [["", "Todos"], ...state.suppliers.map((s) => [s.id, s.name])]) + select("status", "Estado de pago", [["", "Todos"], "Pagada", "Pendiente"]) + field("from", "Desde", "", "date", `min="${state.started}" max="${state.today}"`) + field("to", "Hasta", "", "date", `min="${state.started}" max="${state.today}"`))}<div class="card" id="listing"></div>`;
+  attachFilter((f) => {
+    const rows = state.purchaseInvoices.filter(
+      (i) =>
+        matches(f.search, i.invoiceNumber, i.supplier, idLabel("COM", i.id)) &&
+        (!f.supplier || String(i.supplierId) === f.supplier) &&
+        (!f.status || i.status === f.status) &&
+        (!f.from || i.date >= f.from) &&
+        (!f.to || i.date <= f.to),
+    );
+    $("#listing").innerHTML = table(
+      [
+        "Factura del proveedor",
+        "Proveedor",
+        "Fecha",
+        "Total",
+        "Pago",
+        "Origen",
+        "Acciones",
+      ],
+      rows
+        .slice()
+        .reverse()
+        .map((i) =>
+          tr([
+            `<strong>${esc(i.invoiceNumber)}</strong><small>${idLabel("COM", i.id)}</small>`,
+            esc(i.supplier),
+            date(i.date),
+            crc(i.total),
+            `${statusBadge(i.status)}${i.status === "Pendiente" ? `<small>Vence: ${date(i.dueDate)}</small>` : ""}`,
+            i.orderId ? idLabel("PED", i.orderId) : "Compra directa",
+            button("Ver", "view-purchase-invoice", i.id, "small"),
+          ]),
+        ),
+      "Aún no hay facturas de proveedores registradas.",
+    );
+  });
+}
+function newPurchaseInvoice() {
+  if (!state.suppliers.length)
+    return toast("Primero registra un proveedor.", true);
+  let supplierId =
+    state.suppliers.find((s) => s.active)?.id ?? state.suppliers[0].id;
+  let orderId = "",
+    items = [];
+  openDialog(
+    "Registrar factura de compra",
+    `<form id="purchase-form" class="stack-gap">
+    <div class="form-grid">${select(
+      "supplierId",
+      "Proveedor",
+      state.suppliers.map((s) => [
+        s.id,
+        `${s.name}${s.active ? "" : " (inactivo)"}`,
+      ]),
+      supplierId,
+      "required",
+    )}${field("invoiceNumber", "Número de factura del proveedor", "", "text", 'required maxlength="500"')}${field("date", "Fecha de emisión", state.today, "date", `required min="${state.started}" max="${state.today}"`)}${select("status", "Estado de pago", ["Pagada", "Pendiente"], "Pagada")}
+    <div id="purchase-due">${field("dueDate", "Fecha de vencimiento", "", "date", `min="${state.started}"`)}</div>${field("notes", "Observaciones")}</div>
+    <div id="purchase-source"></div><div class="notice info" id="purchase-notice"></div>
+    <div id="purchase-picker" class="line-add"></div><div id="purchase-lines"></div><div id="purchase-totals"></div>
+    <p class="form-help">Ingresa el costo unitario <b>sin IVA</b> y el impuesto indicado en la factura. Los importes se calculan por línea; el descuento se aplica antes del IVA. Revisa los datos antes de guardar.</p>
+    <p class="error" role="alert"></p><div class="dialog-footer">${button("Cancelar", "close")}<button type="submit" class="btn primary">Guardar factura de compra</button></div></form>`,
+  );
+  const form = $("#purchase-form");
+  function totals() {
+    const round = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+    const sum = items.reduce(
+      (r, l) => {
+        const gross = round(Number(l.qty) * Number(l.price));
+        const net = round(gross - round((gross * Number(l.discount)) / 100));
+        return {
+          subtotal: round(r.subtotal + net),
+          vat: round(r.vat + round((net * Number(l.tax)) / 100)),
+        };
+      },
+      { subtotal: 0, vat: 0 },
+    );
+    $("#purchase-totals").innerHTML =
+      `<div class="total-line"><span>Subtotal sin IVA</span><b>${crc(sum.subtotal)}</b></div><div class="total-line"><span>IVA</span><b>${crc(sum.vat)}</b></div><div class="total-line grand"><span>Total de compra</span><span>${crc(round(sum.subtotal + sum.vat))}</span></div>`;
+  }
+  function paintLines() {
+    $("#purchase-lines").innerHTML = table(
+      ["Producto", "Cantidad", "Costo sin IVA (₡)", "IVA %", "Desc. %", ""],
+      items.map((l, i) => {
+        const p = state.products.find((p) => p.id === l.productId);
+        const input = (key, label, min, max, step) =>
+          `<input type="number" class="cart-input" value="${esc(l[key])}" aria-label="${label} de ${esc(p.name)}" data-purchase-line="${i}" data-key="${key}" required min="${min}" max="${max}" step="${step}" ${orderId && key === "qty" ? "readonly" : ""}>`;
+        return tr([
+          esc(p.name),
+          input("qty", "Cantidad", 1, 1000000, 1),
+          input("price", "Costo", 0.01, 100000000, 0.01),
+          input("tax", "IVA", 0, 100, 0.01),
+          input("discount", "Descuento", 0, 100, 0.01),
+          orderId
+            ? ""
+            : `<button type="button" class="btn small danger" data-remove-purchase="${i}" aria-label="Quitar ${esc(p.name)}">×</button>`,
+        ]);
+      }),
+    );
+    totals();
+  }
+  function source() {
+    const orders = state.orders.filter(
+      (o) =>
+        o.supplierId === supplierId &&
+        o.status === "Recibido" &&
+        !state.purchaseInvoices.some((i) => i.orderId === o.id),
+    );
+    $("#purchase-source").innerHTML = select(
+      "orderId",
+      "Origen de la compra",
+      [
+        ["", "Compra directa: mercadería recibida sin pedido"],
+        ...orders.map((o) => [
+          o.id,
+          `${idLabel("PED", o.id)} · Recibido ${date(o.received)}`,
+        ]),
+      ],
+      orderId,
+    );
+    $('[name="orderId"]', form).onchange = (e) => {
+      orderId = e.target.value;
+      const order = state.orders.find((o) => o.id === Number(orderId));
+      items = order
+        ? order.items.map((l) => ({
+            productId: l.productId,
+            qty: l.qty,
+            price: l.price,
+            tax: state.products.find((p) => p.id === l.productId).tax,
+            discount: 0,
+          }))
+        : [];
+      picker();
+      paintLines();
+    };
+    picker();
+    paintLines();
+  }
+  function picker() {
+    $("#purchase-notice").textContent = orderId
+      ? "Este pedido ya fue recibido. Guardar su factura no modifica existencias ni revaloriza los costos registrados en la recepción."
+      : "Compra directa: confirma que esta mercadería ya llegó y aún no fue ingresada. Guardar la factura sumará estas cantidades al inventario.";
+    const products = state.products.filter(
+      (p) => p.active && p.offers.some((o) => o.supplierId === supplierId),
+    );
+    $("#purchase-picker").hidden = !!orderId;
+    $("#purchase-picker").innerHTML = orderId
+      ? ""
+      : `${select(
+          "productId",
+          "Producto",
+          products.map((p) => [p.id, `${p.code} · ${p.name}`]),
+        )}${field("qty", "Cantidad a agregar", 1, "number", 'min="1" step="1"')}<button class="btn" type="button" id="add-purchase-line">Agregar</button>`;
+    if (!orderId)
+      $("#add-purchase-line").onclick = () => {
+        const p = state.products.find(
+          (p) => p.id === Number($('[name="productId"]', form).value),
+        );
+        const qty = Number($('[name="qty"]', form).value);
+        if (!p || !Number.isSafeInteger(qty) || qty <= 0)
+          return ($(".error", form).textContent =
+            "Selecciona un producto y una cantidad entera mayor que cero.");
+        const old = items.find((l) => l.productId === p.id);
+        if (old) old.qty = Number(old.qty) + qty;
+        else
+          items.push({
+            productId: p.id,
+            qty,
+            price: p.offers.find((o) => o.supplierId === supplierId).cost,
+            tax: p.tax,
+            discount: 0,
+          });
+        $(".error", form).textContent = "";
+        paintLines();
+      };
+  }
+  $('[name="supplierId"]', form).onchange = (e) => {
+    supplierId = Number(e.target.value);
+    orderId = "";
+    items = [];
+    source();
+  };
+  $('[name="status"]', form).onchange = () => {
+    const pending = $('[name="status"]', form).value === "Pendiente";
+    $("#purchase-due").hidden = !pending;
+    $('[name="dueDate"]', form).required = pending;
+    if (!pending) $('[name="dueDate"]', form).value = "";
+  };
+  $('[name="status"]', form).onchange();
+  $("#purchase-lines").oninput = (e) => {
+    if (e.target.dataset.purchaseLine !== undefined) {
+      items[Number(e.target.dataset.purchaseLine)][e.target.dataset.key] =
+        e.target.value;
+      totals();
+    }
+  };
+  $("#purchase-lines").onclick = (e) => {
+    const b = e.target.closest("[data-remove-purchase]");
+    if (b) {
+      items.splice(Number(b.dataset.removePurchase), 1);
+      paintLines();
+    }
+  };
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = $('button[type="submit"]', form);
+    btn.disabled = true;
+    try {
+      await api("purchase-invoices", "POST", {
+        ...Object.fromEntries(new FormData(form)),
+        supplierId,
+        orderId: orderId || null,
+        items,
+      });
+      $("#modal").close();
+      await reload();
+      toast(
+        orderId
+          ? "Factura asociada al pedido. El inventario se conserva."
+          : "Factura guardada y mercadería ingresada al inventario.",
+      );
+    } catch (error) {
+      $(".error", form).textContent = error.message;
+    } finally {
+      btn.disabled = false;
+    }
+  };
+  source();
+}
+function purchaseInvoiceContent(i) {
+  return `<div class="detail-grid"><div><small>Proveedor</small>${esc(i.supplier)}<br>${esc(i.supplierIdentification)}</div><div><small>Número de factura del proveedor</small>${esc(i.invoiceNumber)}</div><div><small>Fecha de emisión</small>${date(i.date)}</div><div><small>Estado de pago</small>${statusBadge(i.status)}<br>${i.status === "Pagada" ? `Pago registrado: ${date(i.paidDate)}` : `Vencimiento: ${date(i.dueDate)}`}</div><div><small>Origen</small>${i.orderId ? idLabel("PED", i.orderId) : "Compra directa con ingreso a inventario"}</div><div><small>Registro</small>${date(i.registered)} · ${esc(i.user)}</div></div>
+    ${table(
+      ["Producto", "Cantidad", "Costo sin IVA", "Descuento", "IVA", "Total"],
+      i.items.map((l) =>
+        tr([
+          `${esc(l.name)}<small>${esc(l.code)}</small>`,
+          l.qty,
+          crc(l.price),
+          crc(l.discountAmount),
+          `${crc(l.vat)}<small>${l.tax}%</small>`,
+          crc(l.total),
+        ]),
+      ),
+    )}
+    <div class="total-line"><span>Subtotal sin IVA</span><b>${crc(i.subtotal)}</b></div><div class="total-line"><span>IVA</span><b>${crc(i.vat)}</b></div><div class="total-line grand"><span>Total</span><span>${crc(i.total)}</span></div><p>${esc(i.notes)}</p>`;
+}
+function viewPurchaseInvoice(id) {
+  const i = state.purchaseInvoices.find((i) => i.id === Number(id));
+  openDialog(
+    `Compra ${idLabel("COM", i.id)}`,
+    `${purchaseInvoiceContent(i)}<p class="form-help">Registro interno del comprobante entregado por el proveedor. Conserva la factura original.</p><div class="dialog-footer">${isAdmin() && i.status === "Pendiente" ? button("Marcar como pagada", "pay-purchase-invoice", i.id) : ""}${button("Imprimir / guardar PDF", "print-purchase-invoice", i.id, "primary")}</div>`,
+  );
+}
+function confirmPurchasePayment(id) {
+  const i = state.purchaseInvoices.find((i) => i.id === Number(id));
+  openDialog(
+    "Confirmar pago de factura",
+    `<p>¿Ya pagaste la factura <b>${esc(i.invoiceNumber)}</b> de ${esc(i.supplier)} por <b>${crc(i.total)}</b>?</p><p class="form-help">Esta opción registra el pago completo; no realiza transferencias bancarias.</p><p class="error" role="alert"></p><div class="dialog-footer">${button("Cancelar", "close")}<button type="button" class="btn primary" id="confirm-purchase-payment">Confirmar pago completo</button></div>`,
+  );
+  $("#confirm-purchase-payment").onclick = async (e) => {
+    e.target.disabled = true;
+    try {
+      await api(`purchase-invoices/${i.id}/pay`, "POST");
+      $("#modal").close();
+      await reload();
+      toast("Pago registrado.");
+    } catch (error) {
+      $("#modal .error").textContent = error.message;
+      e.target.disabled = false;
+    }
+  };
+}
+
+function receiptWidth() {
+  try {
+    return localStorage.getItem("sipro-ticket-width") === "58" ? 58 : 80;
+  } catch {
+    return 80;
+  }
+}
+function ticketContent(i, width = 80) {
+  const time = i.issuedAt
+    ? new Intl.DateTimeFormat("es-CR", {
+        timeZone: "America/Costa_Rica",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(i.issuedAt))
+    : "";
+  const discount = i.items.reduce((sum, l) => sum + l.discount, 0);
+  return `<article class="receipt receipt-${width}" aria-label="Ticket de venta ${idLabel("FAC", i.id)}">
+    <header class="receipt-header"><strong>SIPRO</strong><div>MINI SÚPER / LICORERA</div><div>TICKET DE VENTA</div></header>
+    ${i.status === "Anulada" ? '<div class="receipt-void">FACTURA ANULADA</div>' : ""}
+    <div class="receipt-rule"></div><div class="receipt-row"><b>${idLabel("FAC", i.id)}</b><span>${date(i.date)}</span></div>
+    <div>Cajero: ${esc(i.user)}${time ? ` · ${esc(time)}` : ""}</div><div>Cliente: ${esc(i.customer)}</div>${i.identification ? `<div>Identificación: ${esc(i.identification)}</div>` : ""}
+    <div class="receipt-rule"></div><div class="receipt-row"><b>ARTÍCULO / CANT. × PRECIO</b><b>IMPORTE</b></div>
+    ${i.items.map((l) => `<section class="receipt-item"><b>${esc(l.name)}</b><div class="receipt-row"><span>${l.qty} × ${crc(l.price)}</span><span>${crc(l.total)}</span></div>${l.discount ? `<div class="receipt-small">Descuento incluido: ${crc(l.discount)}</div>` : ""}<div class="receipt-small">IVA ${l.tax}% incluido: ${crc(l.vat)}</div></section>`).join("")}
+    <div class="receipt-rule"></div>${discount ? `<div class="receipt-row"><span>Descuento aplicado</span><span>${crc(discount)}</span></div>` : ""}<div class="receipt-row"><span>Subtotal sin IVA</span><span>${crc(i.subtotal)}</span></div><div class="receipt-row"><span>IVA</span><span>${crc(i.vat)}</span></div><div class="receipt-row receipt-total"><b>TOTAL CRC</b><b>${crc(i.total)}</b></div><div class="receipt-rule"></div>
+    <div class="receipt-row"><span>Pago: ${esc(i.payment)}</span><span>${crc(i.paid)}</span></div><div class="receipt-row"><b>Vuelto</b><b>${crc(i.change)}</b></div>
+    ${i.notes ? `<p class="receipt-note">${esc(i.notes)}</p>` : ""}${i.status === "Anulada" ? `<p class="receipt-note">Anulación: ${date(i.voidDate)}<br>Motivo: ${esc(i.reason)}</p>` : ""}
+    <footer class="receipt-footer"><b>¡Gracias por su compra!</b><div>${idLabel("FAC", i.id)} · ${i.items.reduce((sum, l) => sum + l.qty, 0)} artículos</div><div>Comprobante académico.<br>Sin validez de factura electrónica.</div></footer>
+  </article>`;
+}
+async function printTicket(invoice) {
+  const width = Number($('[name="ticketWidth"]')?.value || receiptWidth());
+  const area = $("#print-area");
+  area.innerHTML = ticketContent(invoice, width);
+  document.body.dataset.printFormat = "ticket";
+  area.classList.add("measure-ticket");
+  const height = Math.max(
+    60,
+    Math.min(
+      2000,
+      Math.ceil(
+        (area.firstElementChild.getBoundingClientRect().height * 25.4) / 96,
+      ) + 10,
+    ),
+  );
+  area.classList.remove("measure-ticket");
+  $("#ticket-page-style")?.remove();
+  const stylesheet = document.createElement("link");
+  stylesheet.id = "ticket-page-style";
+  stylesheet.rel = "stylesheet";
+  stylesheet.href = `/ticket-page.css?width=${width}&height=${height}`;
+  await new Promise((resolve, reject) => {
+    stylesheet.onload = resolve;
+    stylesheet.onerror = () =>
+      reject(
+        new Error(
+          "No se pudo preparar el tamaño del ticket. Intenta imprimir nuevamente.",
+        ),
+      );
+    document.head.append(stylesheet);
+  });
+  window.print();
+}
+function savedSalesPage() {
+  const active = state.invoices.filter((i) => i.status === "Emitida");
+  $("#content").innerHTML =
+    `${head("Ventas guardadas", "Todas las facturas emitidas, disponibles para consulta y reimpresión.", '<a class="btn primary" href="#invoices">＋ Nueva venta</a>')}<div class="pos-history-summary"><b>${state.invoices.length} comprobantes</b><span>Ventas vigentes: ${crc(active.reduce((sum, i) => sum + i.total, 0))}</span><span>${state.invoices.length - active.length} anuladas</span></div>${filters(select("status", "Estado", [["", "Todos"], "Emitida", "Anulada"]) + field("from", "Desde", "", "date", `min="${state.started}" max="${state.today}"`) + field("to", "Hasta", "", "date", `min="${state.started}" max="${state.today}"`))}<div class="card" id="listing"></div>`;
+  attachFilter((f) => {
+    const rows = state.invoices.filter(
+      (i) =>
+        matches(f.search, idLabel("FAC", i.id), i.customer, i.identification) &&
+        (!f.status || i.status === f.status) &&
+        (!f.from || i.date >= f.from) &&
+        (!f.to || i.date <= f.to),
+    );
+    $("#listing").innerHTML = table(
+      [
+        "Factura",
+        "Fecha",
+        "Cliente",
+        "Cajero",
+        "Pago",
+        "Total",
+        "Estado",
+        "Comprobante",
+      ],
+      rows
+        .slice()
+        .reverse()
+        .map((i) =>
+          tr([
+            idLabel("FAC", i.id),
+            date(i.date),
+            esc(i.customer),
+            esc(i.user),
+            esc(i.payment),
+            crc(i.total),
+            statusBadge(i.status),
+            button("Ver / reimprimir ticket", "view-invoice", i.id, "small"),
+          ]),
+        ),
+    );
+  });
+}
+
+// Atajos de caja; no actúan mientras hay un diálogo abierto.
+document.addEventListener("keydown", (e) => {
+  if (currentPage !== "invoices" || $("#modal").open || !state) return;
+  const actions = {
+    F2: "focus-code",
+    F4: "focus-product",
+    F8: "invoice-history",
+    F9: "focus-payment",
+  };
+  if (actions[e.key]) {
+    e.preventDefault();
+    dispatch(actions[e.key]).catch((error) => toast(error.message, true));
+  }
+  if (e.key === "F10" && !$("#issue-invoice")?.disabled) {
+    e.preventDefault();
+    $("#sale-form")?.requestSubmit();
+  }
+});

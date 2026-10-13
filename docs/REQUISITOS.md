@@ -42,3 +42,26 @@ Referencia: **Proyecto de Sistemas.pdf**, documento adjunto por el usuario, etap
 `npm test` verifica autenticación, roles, CRUD, duplicados, mínimos de compra, ciclo pedido/recepción/venta/anulación, inventario concurrente, transacciones fallidas, persistencia SQLite, filtros de reportes y exportación Excel.
 
 `npm run test:browser` recorre los formularios reales, revisa permisos visibles, guarda PDF y Excel, y comprueba que la pantalla de resumen no desborde un ancho móvil de 390 píxeles. Utiliza una base temporal; las pruebas no introducen operaciones en la base de demostración del usuario.
+
+## Ampliación solicitada: facturas de proveedores
+
+Se incorpora el apartado **Facturas de compra** como extensión de compras/facturación:
+
+- Registro del número externo único por proveedor, fecha, líneas con costo sin IVA, descuento e impuesto, subtotal, total y observaciones.
+- Compra directa recibida: entrada de inventario y costo promedio ponderado, sin IVA, con descuentos. Los mínimos comerciales restringen nuevos pedidos, no el registro de un comprobante de una compra ya realizada.
+- Factura de pedido recibido: asociación única, con comprobación de proveedor, productos y cantidades. Mantiene el inventario y la valoración ya registrada; no corrige retroactivamente costos ni utilidades si el precio facturado difiere del pedido.
+- Estado pagada/pendiente, vencimiento y registro posterior del pago completo; consulta y filtro de historial.
+- Reporte independiente de facturas de compra, impresión/PDF y Excel.
+- Administrador registra y marca pagos; dependiente consulta. Sin adjuntos, edición/anulación, recepción parcial, facturación parcial ni pagos parciales en esta ampliación.
+- Las bases existentes conservan todos sus datos; la colección de facturas de compra se incorpora automáticamente, sin reinicialización.
+
+Las pruebas comprueban cálculo de importes, entradas directas, ausencia de movimientos duplicados por asociación a pedidos, duplicados concurrentes, permisos, pagos, reportes y compatibilidad con la base anterior. El recorrido del navegador registra ambos tipos de compra, imprime el detalle, registra el pago y exporta el reporte.
+
+## Ampliación solicitada: interfaz de caja e impresión de tickets
+
+- Presentación compacta de punto de venta, entrada por código/lector de teclado y atajos F2/F4/F8/F9/F10.
+- Apartado permanente **Ventas guardadas** con filtros y acceso al comprobante persistido.
+- Vista previa, impresión y reimpresión térmica de **80 mm o 58 mm**, con ancho seleccionable y largo del PDF calculado según el contenido.
+- Las facturas nuevas conservan fecha/hora de emisión. Las anteriores siguen siendo compatibles y muestran su fecha original.
+- La reimpresión no escribe operaciones ni modifica existencias; los tickets anulados muestran el estado y la justificación.
+- Reportes y registros de compras se imprimen en A4. No se integran funciones propietarias de Qupos, periféricos ESC/POS ni facturación fiscal.

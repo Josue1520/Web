@@ -1029,3 +1029,493 @@ dialog::backdrop {
 .login-story .story-label {
   color: #bed0e4;
 }
+
+/* Interfaz de caja: controles compactos, tabla central y total siempre visible. */
+@media screen {
+  :root {
+    --blue: #226187;
+    --deep: #15394e;
+    --bg: #e7ebee;
+    --line: #cbd3da;
+    --radius: 3px;
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    font-size: 13px;
+  }
+  .shell {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+  .sidebar {
+    background: #17384b;
+    color: #dbe4eb;
+    padding: 20px 10px;
+    border-right: 1px solid #102a3b;
+  }
+  .sidebar .brand {
+    color: white;
+    font-size: 24px;
+    margin-bottom: 30px;
+  }
+  .sidebar .brand small {
+    color: #b2c4d1;
+    font-size: 9px;
+  }
+  .sidebar .brand img {
+    border-radius: 3px;
+  }
+  .nav-caption {
+    color: #92aebf;
+    letter-spacing: 1px;
+  }
+  .nav-links {
+    gap: 3px;
+  }
+  .nav-links a {
+    color: #cddbe5;
+    border-radius: 3px;
+    padding: 11px 10px;
+    font-size: 12px;
+  }
+  .nav-links a:hover {
+    background: #254a60;
+    color: white;
+  }
+  .nav-links a.active {
+    background: #f1b94e;
+    color: #182e3e;
+    box-shadow: inset 3px 0 #fff0c7;
+  }
+  .sidebar-bottom,
+  .sidebar-bottom b {
+    color: #a9bfcd;
+  }
+  .topbar {
+    background: #fff;
+    height: 48px;
+    padding: 0 22px;
+    border-bottom: 2px solid #226187;
+  }
+  .avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 3px;
+  }
+  .content {
+    padding: 19px 22px;
+    max-width: none;
+  }
+  h1 {
+    font-size: 23px;
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+  .page-head {
+    margin-bottom: 17px;
+  }
+  .page-head p {
+    font-size: 12px;
+  }
+  .btn {
+    padding: 8px 12px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  input,
+  select,
+  textarea {
+    border-radius: 3px;
+    min-height: 33px;
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+  label.field {
+    font-size: 11px;
+    gap: 5px;
+  }
+  .card {
+    border-radius: 3px;
+    margin-bottom: 14px;
+  }
+  .card-header {
+    padding: 11px 14px;
+    background: #e0e7ec;
+    border-bottom: 1px solid #bfcbd4;
+  }
+  .card-header h2 {
+    font-size: 13px;
+  }
+  .card-body {
+    padding: 15px;
+  }
+  .filters {
+    gap: 9px;
+    margin-bottom: 12px;
+  }
+  .stats {
+    gap: 12px;
+    margin-bottom: 15px;
+  }
+  .stat {
+    padding: 15px;
+    border-radius: 3px;
+    border-top: 3px solid #226187;
+  }
+  .stat.warn {
+    border-top-color: #cb8c20;
+  }
+  .stat strong {
+    font-size: 26px;
+    margin: 10px 0 5px;
+  }
+  .dashboard-grid {
+    gap: 15px;
+  }
+  .notice {
+    border-radius: 3px;
+    padding: 11px 14px;
+    margin-bottom: 16px;
+  }
+  th {
+    background: #e9eef2;
+    padding: 10px 12px;
+    font-size: 10px;
+    border-bottom: 1px solid #c2cdd6;
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e0e6eb;
+  }
+  tbody tr:nth-child(even) {
+    background: #f6f8fa;
+  }
+  .badge {
+    border-radius: 3px;
+    padding: 4px 6px;
+  }
+  .quick-action {
+    border-radius: 3px;
+    padding: 14px;
+    gap: 8px;
+  }
+  .product-icon {
+    width: 28px;
+    height: 30px;
+    border-radius: 3px;
+  }
+  .activity {
+    padding: 11px 0;
+  }
+  .welcome-note {
+    margin-top: 15px;
+  }
+  dialog {
+    border-radius: 4px;
+    box-shadow: 0 12px 55px #0b223c65;
+  }
+  .dialog-head {
+    padding: 14px 19px;
+    background: #17384b;
+    color: white;
+  }
+  .dialog-head .close {
+    color: #dce5ec;
+  }
+  .dialog-body {
+    padding: 20px;
+  }
+  .pos-toolbar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    background: #d5dfe6;
+    border: 1px solid #bbc9d4;
+    padding: 7px;
+    margin-bottom: 14px;
+  }
+  .pos-toolbar .btn {
+    background: #f8fafb;
+  }
+  kbd {
+    font:
+      600 10px "Segoe UI",
+      sans-serif;
+    padding: 3px 5px;
+    background: #e0e9ef;
+    border: 1px solid #c0cfd9;
+    border-radius: 2px;
+  }
+  .sale-layout {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 14px;
+  }
+  .sale-summary {
+    top: 10px;
+    border: 1px solid #9fb2c0;
+  }
+  .sale-summary .card-header {
+    background: #226187;
+    color: white;
+  }
+  .sale-summary .grand {
+    background: #18394c;
+    color: white;
+    font-size: 26px;
+    padding: 16px 10px;
+    margin: 10px -7px;
+  }
+  .sale-summary .total-line {
+    padding: 9px 0;
+  }
+  .sale-summary .total-line.grand {
+    padding: 16px 10px;
+  }
+  #issue-invoice {
+    background: #238157;
+    border-color: #176b46;
+    min-height: 45px;
+    font-size: 14px;
+    margin-top: 15px;
+  }
+  #issue-invoice:hover {
+    background: #176b46;
+  }
+  .pos-scan {
+    display: flex;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 12px;
+  }
+  .pos-scan .field {
+    flex: 1;
+  }
+  .pos-scan input {
+    height: 40px;
+    font-size: 15px;
+    border-color: #648fab;
+    font-family: Consolas, monospace;
+  }
+  .pos-scan .btn {
+    height: 40px;
+  }
+  #cart-table {
+    min-height: 300px;
+  }
+  #cart-table table {
+    font-size: 13px;
+  }
+  #cart-table th {
+    background: #31566f;
+    color: white;
+  }
+  #cart-table td {
+    border-right: 1px solid #e0e6eb;
+  }
+  #cart-table .empty {
+    height: 235px;
+    font-size: 13px;
+  }
+  .pos-history-summary {
+    display: flex;
+    gap: 25px;
+    flex-wrap: wrap;
+    padding: 13px 16px;
+    border: 1px solid #bfcdd6;
+    background: #dce7ef;
+    margin-bottom: 17px;
+  }
+  .ticket-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 25px;
+    align-items: start;
+  }
+  #ticket-preview {
+    background: #e3e7ea;
+    padding: 22px 12px;
+    overflow: auto;
+    max-height: 68vh;
+  }
+  #ticket-preview .receipt {
+    margin: auto;
+    padding: 12px;
+    box-sizing: content-box;
+    background: white;
+    box-shadow: 0 3px 10px #112b4522;
+  }
+  .ticket-actions {
+    display: grid;
+    gap: 12px;
+  }
+  .ticket-actions p,
+  .ticket-actions h3 {
+    margin: 0;
+  }
+  .ticket-actions p {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .ticket-actions h3 {
+    margin-top: 5px;
+  }
+}
+.receipt {
+  width: 74mm;
+  color: #000;
+  font:
+    12px/1.4 "Courier New",
+    Consolas,
+    monospace;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.receipt-58 {
+  width: 52mm;
+  font-size: 11px;
+}
+.receipt-header {
+  text-align: center;
+  line-height: 1.65;
+}
+.receipt-header > strong {
+  font-size: 22px;
+  letter-spacing: 2px;
+}
+.receipt-rule {
+  border-top: 1px dashed #000;
+  margin: 9px 0;
+}
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: start;
+}
+.receipt-row > span:last-child,
+.receipt-row > b:last-child {
+  flex-shrink: 0;
+  text-align: right;
+}
+.receipt-item {
+  padding: 7px 0;
+  border-bottom: 1px dotted #777;
+  break-inside: avoid;
+}
+.receipt-item > b {
+  display: block;
+}
+.receipt-small {
+  font-size: 10px;
+}
+.receipt-total {
+  font-size: 18px;
+  margin-top: 8px;
+}
+.receipt-58 .receipt-total {
+  font-size: 15px;
+}
+.receipt-footer {
+  text-align: center;
+  margin-top: 17px;
+}
+.receipt-footer > div {
+  margin-top: 7px;
+  font-size: 10px;
+}
+.receipt-note {
+  margin: 10px 0;
+  line-height: 1.4;
+}
+.receipt-void {
+  border: 2px solid black;
+  text-align: center;
+  font-weight: bold;
+  padding: 7px;
+  margin: 9px 0;
+}
+#print-area.measure-ticket {
+  display: block;
+  position: fixed;
+  left: -10000px;
+  top: 0;
+}
+@media screen and (max-width: 1100px) {
+  .sale-layout {
+    grid-template-columns: minmax(0, 1fr) 265px;
+  }
+  .pos-scan {
+    flex-wrap: wrap;
+  }
+  .pos-scan .field {
+    min-width: 180px;
+  }
+  .pos-scan .btn {
+    flex: 1;
+  }
+}
+@media screen and (max-width: 800px) {
+  .sale-layout {
+    grid-template-columns: 1fr;
+  }
+  .sale-summary {
+    position: static;
+  }
+  .ticket-layout {
+    grid-template-columns: 1fr;
+  }
+  .ticket-actions {
+    grid-template-columns: 1fr;
+  }
+}
+@media screen and (max-width: 700px) {
+  .shell {
+    display: block;
+  }
+  .sidebar {
+    padding: 12px 10px;
+  }
+  .sidebar .brand {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+  .nav-links a {
+    padding: 9px;
+  }
+  .content {
+    padding: 18px 12px;
+  }
+  .topbar {
+    padding: 0 13px;
+  }
+  .pos-toolbar {
+    gap: 5px;
+  }
+  .pos-toolbar .btn {
+    font-size: 11px;
+    padding: 7px;
+  }
+  #cart-table {
+    min-height: 180px;
+  }
+  #ticket-preview {
+    padding: 12px 0;
+  }
+  #ticket-preview .receipt {
+    padding: 7px;
+  }
+}
+@media print {
+  @page {
+    size: A4;
+  }
+  body[data-print-format="ticket"] {
+    margin: 0;
+    padding: 0;
+    color: black;
+  }
+  body[data-print-format="ticket"] #print-area {
+    margin: 0;
+    padding: 0;
+  }
+  body[data-print-format="ticket"] .receipt {
+    box-shadow: none;
+  }
+}

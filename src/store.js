@@ -152,6 +152,7 @@ export function seed() {
     products,
     orders: [],
     invoices: [],
+    purchaseInvoices: [],
     users: [
       {
         id: 1,
@@ -201,8 +202,14 @@ export function openStore(path) {
     db.prepare("INSERT INTO app_state VALUES (1, ?)").run(
       JSON.stringify(seed()),
     );
-  const read = () =>
-    JSON.parse(db.prepare("SELECT data FROM app_state WHERE id=1").get().data);
+  const read = () => {
+    const state = JSON.parse(
+      db.prepare("SELECT data FROM app_state WHERE id=1").get().data,
+    );
+    // Compatibilidad con bases creadas antes del módulo de facturas de compra.
+    state.purchaseInvoices ??= [];
+    return state;
+  };
   return {
     read,
     change(fn) {

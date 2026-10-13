@@ -311,6 +311,7 @@ export function createInvoice(s, user, b) {
   const invoice = {
     id: next(s.invoices),
     date: today(),
+    issuedAt: new Date().toISOString(),
     customer: text(b.customer, "Cliente"),
     identification: text(b.identification ?? "", "Identificación", false),
     notes: text(b.notes ?? "", "Observaciones", false),
@@ -358,6 +359,7 @@ export function report(s, user, query) {
     [
       "orders",
       "purchases",
+      "purchase-invoices",
       "requested",
       "inventory",
       "sales",
@@ -390,7 +392,40 @@ export function report(s, user, query) {
       (!status || o.status === status),
   );
   let columns, rows, title;
-  if (type === "inventory") {
+  if (type === "purchase-invoices") {
+    title = "Facturas de compra";
+    columns = [
+      "Registro",
+      "Factura del proveedor",
+      "Fecha",
+      "Proveedor",
+      "Pedido",
+      "Subtotal sin IVA",
+      "IVA",
+      "Total",
+      "Estado de pago",
+      "Vencimiento",
+    ];
+    rows = s.purchaseInvoices
+      .filter(
+        (i) =>
+          within(i.date) &&
+          (!supplierId || String(i.supplierId) === supplierId) &&
+          (!status || i.status === status),
+      )
+      .map((i) => [
+        `COM-${i.id}`,
+        i.invoiceNumber,
+        i.date,
+        i.supplier,
+        i.orderId ? `PED-${i.orderId}` : "Compra directa",
+        i.subtotal,
+        i.vat,
+        i.total,
+        i.status,
+        i.dueDate || "—",
+      ]);
+  } else if (type === "inventory") {
     title = "Inventario actual";
     columns = [
       "Código",
@@ -495,4 +530,147 @@ export function report(s, user, query) {
     }
   }
   return { type, title, from, to, columns, rows };
+}
+
+// Factura externa de compra: distinta del comprobante de venta emitido por SIPRO.
+export function createPurchaseInvoice(s, user, b) {
+  admin(user);
+  const supplier = find(s.suppliers, b.supplierId);
+  const invoiceNumber = text(
+    b.invoiceNumber,
+    "Número de factura del proveedor",
+  );
+  ensure(
+    !s.purchaseInvoices.some(
+      (i) =>
+        i.supplierId === supplier.id &&
+        i.invoiceNumber.toLocaleLowerCase("es") ===
+          invoiceNumber.toLocaleLowerCase("es"),
+    ),
+    "Esta factura ya está registrada para el proveedor.",
+  );
+  const issued = text(b.date, "Fecha de emisión");
+  const validDate = (v) =>
+    /^\d{4}-\d{2}-\d{2}$/.test(v) &&
+    !Number.isNaN(Date.parse(v)) &&
+    new Date(v).toISOString().slice(0, 10) === v;
+  ensure(
+    validDate(issued) && issued >= s.started && issued <= today(),
+    `La fecha debe estar entre ${s.started} y ${today()}.`,
+  );
+  const status = text(b.status, "Estado de pago");
+  ensure(["Pagada", "Pendiente"].includes(status), "Estado de pago inválido.");
+  const dueDate = text(b.dueDate ?? "", "Vencimiento", false);
+  if (status === "Pendiente")
+    ensure(
+      validDate(dueDate) && dueDate >= issued,
+      "Indica un vencimiento válido, igual o posterior a la emisión.",
+    );
+  else if (dueDate)
+    ensure(validDate(dueDate) && dueDate >= issued, "Vencimiento inválido.");
+  const order = b.orderId ? find(s.orders, b.orderId) : null;
+  if (order) {
+    ensure(
+      order.supplierId === supplier.id,
+      "El pedido pertenece a otro proveedor.",
+    );
+    ensure(
+      order.status === "Recibido",
+      "Primero confirma la recepción del pedido.",
+    );
+    ensure(
+      !s.purchaseInvoices.some((i) => i.orderId === order.id),
+      "Este pedido ya tiene una factura de compra registrada.",
+    );
+  } else ensure(supplier.active, "El proveedor está inactivo.");
+  ensure(
+    Array.isArray(b.items) && b.items.length > 0 && b.items.length <= 100,
+    "Agrega entre 1 y 100 productos.",
+  );
+  ensure(
+    new Set(b.items.map((i) => Number(i.productId))).size === b.items.length,
+    "No repitas productos; agrúpalos en una línea.",
+  );
+  if (order)
+    ensure(
+      b.items.length === order.items.length,
+      "La factura debe incluir todos los productos del pedido recibido.",
+    );
+  const items = b.items.map((l) => {
+    const p = find(s.products, l.productId);
+    const qty = number(l.qty, "Cantidad", 1, 1000000, true);
+    const orderLine = order?.items.find((i) => i.productId === p.id);
+    if (order)
+      ensure(
+        orderLine && qty === orderLine.qty,
+        "Las cantidades deben coincidir con el pedido recibido.",
+      );
+    else {
+      ensure(p.active, `${p.name} está inactivo.`);
+      ensure(
+        p.offers.some((o) => o.supplierId === supplier.id),
+        `${p.name} no está asociado al proveedor.`,
+      );
+    }
+    const price = money(number(l.price, "Costo unitario sin IVA", 0.01));
+    const tax = number(l.tax, "IVA", 0, 100);
+    const discount = number(l.discount ?? 0, "Descuento", 0, 100);
+    const gross = money(qty * price);
+    const discountAmount = money((gross * discount) / 100);
+    const net = money(gross - discountAmount);
+    const vat = money((net * tax) / 100);
+    return {
+      productId: p.id,
+      code: orderLine?.code ?? p.code,
+      name: orderLine?.name ?? p.name,
+      qty,
+      price,
+      tax,
+      discount,
+      discountAmount,
+      net,
+      vat,
+      total: money(net + vat),
+    };
+  });
+  const invoice = {
+    id: next(s.purchaseInvoices),
+    supplierId: supplier.id,
+    supplier: order?.supplier ?? supplier.name,
+    supplierIdentification: supplier.identification,
+    invoiceNumber,
+    date: issued,
+    registered: today(),
+    orderId: order?.id ?? null,
+    items,
+    subtotal: money(items.reduce((sum, l) => sum + l.net, 0)),
+    vat: money(items.reduce((sum, l) => sum + l.vat, 0)),
+    total: money(items.reduce((sum, l) => sum + l.total, 0)),
+    status,
+    dueDate,
+    paidDate: status === "Pagada" ? today() : null,
+    notes: text(b.notes ?? "", "Observaciones", false),
+    user: user.username,
+  };
+  // Un pedido recibido ya movió existencias. Su factura solo documenta la compra.
+  if (!order)
+    for (const l of items) {
+      const p = find(s.products, l.productId);
+      p.cost = money((p.stock * p.cost + l.net) / (p.stock + l.qty));
+      movement(s, p, l.qty, `Compra ${invoiceNumber} · ${supplier.name}`, user);
+    }
+  s.purchaseInvoices.push(invoice);
+  return invoice;
+}
+export function payPurchaseInvoice(s, user, id) {
+  admin(user);
+  const invoice = find(s.purchaseInvoices, id);
+  ensure(
+    invoice.status === "Pendiente",
+    "La factura ya está marcada como pagada.",
+  );
+  invoice.status = "Pagada";
+  invoice.paidDate = today();
+  invoice.paidUser = user.username;
+  return invoice;
 }

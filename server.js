@@ -15,6 +15,8 @@ import {
   saveOrder,
   receiveOrder,
   createInvoice,
+  createPurchaseInvoice,
+  payPurchaseInvoice,
   voidInvoice,
   report,
 } from "./src/domain.js";
@@ -226,6 +228,13 @@ export function createApp({
             return receiveOrder(s, user, match[1]);
           if (path === "/api/invoices" && method === "POST")
             return createInvoice(s, user, body);
+          if (path === "/api/purchase-invoices" && method === "POST")
+            return createPurchaseInvoice(s, user, body);
+          if (
+            (match = path.match(/^\/api\/purchase-invoices\/(\d+)\/pay$/)) &&
+            method === "POST"
+          )
+            return payPurchaseInvoice(s, user, match[1]);
           if (
             (match = path.match(/^\/api\/invoices\/(\d+)\/void$/)) &&
             method === "POST"
@@ -240,6 +249,23 @@ export function createApp({
         "Método no permitido.",
         405,
       );
+      if (path === "/ticket-page.css") {
+        const width = Number(url.searchParams.get("width"));
+        const height = Number(url.searchParams.get("height"));
+        ensure(
+          [58, 80].includes(width) &&
+            Number.isInteger(height) &&
+            height >= 60 &&
+            height <= 2000,
+          "Tamaño de ticket inválido.",
+        );
+        res.setHeader("Cache-Control", "no-cache");
+        return send(
+          200,
+          `@media print { @page { size: ${width}mm ${height}mm; margin: 3mm; } }`,
+          "text/css; charset=utf-8",
+        );
+      }
       const routes = {
         "/": "index.html",
         "/Vistas/Index.html": "index.html",

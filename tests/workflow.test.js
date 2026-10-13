@@ -407,3 +407,207 @@ test("rechaza mutaciones de otro origen y no expone la base de datos", async () 
   assert.equal((await fetch(`${base}/data/sipro.sqlite`)).status, 404);
   assert.equal((await fetch(`${base}/Vistas/Facturar.html`)).status, 200);
 });
+
+async function purchaseBody(overrides = {}) {
+  const s = (await call("state")).body;
+  return {
+    supplierId: 1,
+    invoiceNumber: "PROV-001",
+    date: s.today,
+    status: "Pagada",
+    items: [{ productId: 1, qty: 2, price: 500, tax: 13, discount: 10 }],
+    ...overrides,
+  };
+}
+test("factura de compra directa guarda importes, costos y entrada de inventario una sola vez", async () => {
+  const before = (await call("state")).body;
+  const b = await purchaseBody();
+  const result = await call("purchase-invoices", "POST", b);
+  assert.equal(result.status, 201);
+  assert.equal(result.body.subtotal, 900);
+  assert.equal(result.body.vat, 117);
+  assert.equal(result.body.total, 1017);
+  assert.equal(result.body.invoiceNumber, "PROV-001");
+  assert.equal(result.body.orderId, null);
+  const after = (await call("state")).body;
+  assert.equal(after.products[0].stock, before.products[0].stock + 2);
+  assert.equal(after.products[0].cost, 786);
+  assert.equal(after.movements.at(-1).delta, 2);
+  assert.equal(
+    (
+      await call("purchase-invoices", "POST", {
+        ...b,
+        invoiceNumber: " prov-001 ",
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (await call("state")).body.products[0].stock,
+    after.products[0].stock,
+  );
+  const secondSupplier = await purchaseBody({
+    supplierId: 2,
+    items: [{ productId: 3, qty: 1, price: 950, tax: 0 }],
+  });
+  assert.equal(
+    (await call("purchase-invoices", "POST", secondSupplier)).status,
+    201,
+  );
+});
+test("factura asociada a pedido recibido no duplica existencias ni movimientos", async () => {
+  const order = (
+    await call("orders", "POST", {
+      supplierId: 1,
+      items: [{ productId: 1, qty: 10 }],
+    })
+  ).body;
+  const b = await purchaseBody({
+    orderId: order.id,
+    items: [{ productId: 1, qty: 10, price: 800, tax: 13 }],
+  });
+  assert.equal((await call("purchase-invoices", "POST", b)).status, 400);
+  await call(`orders/${order.id}/receive`, "POST");
+  const before = (await call("state")).body;
+  assert.equal(
+    (await call("purchase-invoices", "POST", { ...b, supplierId: 2 })).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call("purchase-invoices", "POST", {
+        ...b,
+        items: [{ productId: 1, qty: 9, price: 800, tax: 13 }],
+      })
+    ).status,
+    400,
+  );
+  assert.equal((await call("purchase-invoices", "POST", b)).status, 201);
+  const after = (await call("state")).body;
+  assert.deepEqual(after.products, before.products);
+  assert.deepEqual(after.movements, before.movements);
+  assert.equal(
+    (await call("purchase-invoices", "POST", { ...b, invoiceNumber: "OTRA" }))
+      .status,
+    400,
+  );
+});
+test("compras inválidas y repetidas concurrentes no dejan datos parciales", async () => {
+  const before = (await call("state")).body;
+  const valid = await purchaseBody();
+  for (const extra of [
+    { date: "2999-01-01" },
+    { date: "2026-02-30" },
+    { invoiceNumber: "" },
+    { status: "Inexistente" },
+    { status: "Pendiente", dueDate: "" },
+    { items: [] },
+    {
+      items: [
+        { productId: 1, qty: 2, price: 500, tax: 13 },
+        { productId: 1, qty: 2, price: 500, tax: 13 },
+      ],
+    },
+    {
+      items: [
+        { productId: 1, qty: 2, price: 500, tax: 13 },
+        { productId: 3, qty: 2, price: 900, tax: 13 },
+      ],
+    },
+    { items: [{ productId: 1, qty: -1, price: 500, tax: 13 }] },
+    { items: [{ productId: 1, qty: 1, price: -500, tax: 13 }] },
+    { items: [{ productId: 1, qty: 1, price: 500, tax: 101 }] },
+  ])
+    assert.equal(
+      (await call("purchase-invoices", "POST", { ...valid, ...extra })).status,
+      400,
+    );
+  const after = (await call("state")).body;
+  assert.deepEqual(after.products, before.products);
+  assert.deepEqual(after.movements, before.movements);
+  assert.deepEqual(after.purchaseInvoices, []);
+  const responses = await Promise.all(
+    [1, 2].map(() => call("purchase-invoices", "POST", valid)),
+  );
+  assert.deepEqual(responses.map((r) => r.status).sort(), [201, 400]);
+  assert.equal(
+    (await call("state")).body.products[0].stock,
+    before.products[0].stock + 2,
+  );
+});
+test("compras a crédito: roles, vencimiento, pago y reportes filtrados", async () => {
+  const s = (await call("state")).body;
+  const b = await purchaseBody({ status: "Pendiente", dueDate: s.today });
+  const clerk = await login("dependiente", "Caja123!");
+  assert.equal((await call("purchase-invoices", "POST", b, clerk)).status, 403);
+  const invoice = (await call("purchase-invoices", "POST", b)).body;
+  assert.equal(
+    (await call(`purchase-invoices/${invoice.id}/pay`, "POST", {}, clerk))
+      .status,
+    403,
+  );
+  assert.equal(
+    (await call("reports?type=purchase-invoices&status=Pendiente")).body.rows
+      .length,
+    1,
+  );
+  assert.equal(
+    (await call("reports?type=purchase-invoices&supplierId=2")).body.rows
+      .length,
+    0,
+  );
+  const excel = await call("reports?type=purchase-invoices&format=xls");
+  assert.equal(excel.status, 200);
+  assert.match(excel.body, /PROV-001/);
+  const before = (await call("state")).body.products;
+  assert.equal(
+    (await call(`purchase-invoices/${invoice.id}/pay`, "POST")).status,
+    201,
+  );
+  assert.equal(
+    (await call(`purchase-invoices/${invoice.id}/pay`, "POST")).status,
+    400,
+  );
+  assert.deepEqual((await call("state")).body.products, before);
+  assert.equal(
+    (await call("reports?type=purchase-invoices&status=Pendiente")).body.rows
+      .length,
+    0,
+  );
+  assert.equal(
+    (
+      await call(
+        "reports?type=purchase-invoices&status=Pagada",
+        "GET",
+        null,
+        clerk,
+      )
+    ).body.rows.length,
+    1,
+  );
+});
+test("actualizar una base anterior conserva registros y agrega facturas de compra sin reinicializar", async () => {
+  await call("suppliers", "POST", supplier);
+  const sale = await call("invoices", "POST", {
+    customer: "Cliente anterior",
+    items: [{ productId: 1, qty: 1 }],
+    payment: "Tarjeta",
+  });
+  assert.equal(sale.status, 201);
+  app.store.change((s) => {
+    delete s.purchaseInvoices;
+  });
+  const before = (await call("state")).body;
+  assert.deepEqual(before.purchaseInvoices, []);
+  assert.equal(
+    (await call("purchase-invoices", "POST", await purchaseBody())).status,
+    201,
+  );
+  const reopened = openStore(join(dir, "test.sqlite"));
+  const saved = reopened.read();
+  reopened.close();
+  assert.equal(saved.suppliers.length, 4);
+  assert.equal(saved.invoices[0].customer, "Cliente anterior");
+  assert.equal(saved.purchaseInvoices.length, 1);
+  assert.equal(saved.products[0].stock, before.products[0].stock + 2);
+});
