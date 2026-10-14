@@ -69,7 +69,7 @@ Las pruebas comprueban cálculo de importes, entradas directas, ausencia de movi
 
 ## Ampliación solicitada: diseño e importación XML
 
-- Navegación superior por operación, abastecimiento, catálogo y administración; se recuperan el azul y blanco originales con una distribución nueva de caja, indicadores, tablas, acceso y formularios.
+- Navegación lateral por operación, abastecimiento, catálogo y administración, plegable en móvil; se recuperan el azul y blanco originales con una distribución nueva de caja, indicadores, tablas, acceso y formularios.
 - XML costarricense 4.3/4.4 con revisión previa, asociación por identificación del emisor y códigos comerciales; alta asistida de proveedor y productos faltantes.
 - Datos e importes reparsados por el servidor al guardar, prevención de duplicados por clave/consecutivo, transacción atómica y recuperación del XML original con hash SHA-256.
 - Las líneas repetidas del mismo producto conservan sus importes de origen; la entrada se agrupa por producto y se comprueban las cantidades totales al vincular un pedido.
@@ -80,3 +80,6 @@ Las pruebas comprueban cálculo de importes, entradas directas, ausencia de movi
 - Los impuestos se conservan por código, tarifa e importe declarado. Las exoneraciones y ajustes se desglosan, sin tratar impuestos específicos como IVA porcentual. Se verifica `neto + impuestos netos + cargos − IVA devuelto = total`.
 - El reporte de compras y Excel incorporan otros impuestos, impuestos asumidos, impuestos netos, cargos e IVA devuelto. Las facturas antiguas se consultan sin migración destructiva.
 - El costo promedio mantiene la regla de neto de mercadería: no capitaliza automáticamente impuestos específicos ni fletes. Esta demostración no determina crédito fiscal ni costo tributario.
+
+- Confirmación persistida del inventario por factura de compra directa nueva: producto, saldo anterior, unidades ingresadas, saldo posterior e identificador del movimiento. No se reconstruye el saldo histórico usando existencias actuales.
+- La factura de pedido recibido muestra que el inventario ingresó al recibirlo; no registra otra entrada. Las pruebas verifican compra manual, XML, pedido recibido, duplicados, persistencia y existencias visibles al recargar Inventario.

@@ -429,6 +429,9 @@ test("factura de compra directa guarda importes, costos y entrada de inventario 
   assert.equal(result.body.total, 1017);
   assert.equal(result.body.invoiceNumber, "PROV-001");
   assert.equal(result.body.orderId, null);
+  assert.equal(result.body.inventoryReceipt.kind, "direct");
+  assert.equal(result.body.inventoryReceipt.entries[0].before, before.products[0].stock);
+  assert.equal(result.body.inventoryReceipt.entries[0].after, before.products[0].stock + 2);
   const after = (await call("state")).body;
   assert.equal(after.products[0].stock, before.products[0].stock + 2);
   assert.equal(after.products[0].cost, 786);

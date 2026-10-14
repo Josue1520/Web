@@ -679,6 +679,7 @@ export function createPurchaseInvoice(s, user, b, xmlDocument = null) {
     paidDate: status === "Pagada" ? today() : null,
     notes: text(b.notes ?? "", "Observaciones", false),
     user: user.username,
+    inventoryReceipt: { kind: order ? "received-order" : "direct", orderId: order?.id ?? null, entries: [] },
   };
   // Un pedido recibido ya movió existencias. Su factura solo documenta la compra.
   if (!order) {
@@ -691,8 +692,11 @@ export function createPurchaseInvoice(s, user, b, xmlDocument = null) {
     }
     for (const l of entries.values()) {
       const p = find(s.products, l.productId);
+      const before = p.stock;
       p.cost = money((p.stock * p.cost + l.net) / (p.stock + l.qty));
       movement(s, p, l.qty, `Compra ${invoiceNumber} · ${supplier.name}`, user);
+      invoice.inventoryReceipt.entries.push({ productId: p.id, code: p.code, name: p.name,
+        before, quantity: l.qty, after: p.stock, movementId: s.movements.at(-1).id });
     }
   }
   s.purchaseInvoices.push(invoice);

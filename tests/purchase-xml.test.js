@@ -59,6 +59,11 @@ test("vista previa no escribe; importación conserva XML, importes, historia y s
   assert.equal(saved.body.items[0].price, 100.12345);
   const state = (await call("state")).body;
   assert.equal(state.products[0].stock, before.products[0].stock + 2);
+  assert.deepEqual(saved.body.inventoryReceipt.entries[0], {
+    productId: 1, code: before.products[0].code, name: before.products[0].name,
+    before: before.products[0].stock, quantity: 2, after: before.products[0].stock + 2,
+    movementId: state.movements.at(-1).id,
+  });
   assert.equal(state.movements.at(-1).date, today());
   assert.equal(state.purchaseStart, "2026-01-15");
   assert.ok(!("purchaseInvoiceDocuments" in state));
@@ -71,6 +76,7 @@ test("vista previa no escribe; importación conserva XML, importes, historia y s
   assert.equal(report.body.rows.length, 1);
   const store = openStore(join(dir, "test.sqlite"));
   assert.equal(store.read().purchaseInvoiceDocuments[saved.body.id], xml);
+  assert.deepEqual(store.read().purchaseInvoices[0].inventoryReceipt, saved.body.inventoryReceipt);
   store.close();
 });
 
@@ -96,6 +102,7 @@ test("XML vinculado a pedido recibido conserva existencias, movimientos y costo"
   const result = await call("purchase-invoices/xml", "POST", { ...importBody(invoiceXml({ code: "74034412" })), mappings: [2], orderId: order.body.id });
   assert.equal(result.status, 201, JSON.stringify(result.body));
   const after = (await call("state")).body;
+  assert.deepEqual(result.body.inventoryReceipt, { kind: "received-order", orderId: order.body.id, entries: [] });
   assert.deepEqual(after.products, before.products);
   assert.deepEqual(after.movements, before.movements);
 });

@@ -27,6 +27,9 @@ page.on("console", (m) => {
 mkdirSync("test-results", { recursive: true });
 const dialog = () => page.getByRole("dialog");
 async function navigate(name) {
+  const menu = page.locator("#workspace-menu");
+  if (await menu.count() && !(await menu.evaluate((el) => el.open)))
+    await menu.locator("summary").click();
   await page
     .getByRole("navigation")
     .getByRole("link", { name, exact: true })
@@ -34,7 +37,7 @@ async function navigate(name) {
   await page
     .locator('nav a[aria-current="page"]')
     .filter({ hasText: name })
-    .waitFor();
+    .waitFor({ state: "attached" });
 }
 async function signIn(username, password) {
   await page
@@ -378,6 +381,7 @@ try {
     ),
   );
   await navigate("Resumen");
+  assert.equal(await page.locator("#workspace-menu").evaluate((el) => el.open), false);
   await page.screenshot({ path: "test-results/movil.png", fullPage: true });
   assert.ok(
     await page.evaluate(

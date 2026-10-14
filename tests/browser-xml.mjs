@@ -65,6 +65,11 @@ try {
   await dialog().getByRole("link", { name: "Descargar XML original" }).waitFor();
   state = await getState();
   assert.equal(state.products.find((p) => p.id === product.id).stock, 2);
+  await dialog().getByRole("heading", { name: "Entrada de inventario confirmada" }).waitFor();
+  const stockRow = dialog().locator(".stock-receipt tbody tr");
+  assert.deepEqual(await stockRow.locator("td").allTextContents(), [
+    `${product.name}${product.code}`, "0", "+2", "2",
+  ]);
   assert.equal(state.purchaseInvoices[0].total, 220);
   assert.equal(state.purchaseInvoices[0].taxTotal, 22);
   await dialog().getByText("Transporte de mercadería", { exact: true }).waitFor();
@@ -81,6 +86,15 @@ try {
   const download = await downloadPromise;
   assert.equal(readFileSync(await download.path(), "utf8"), xml);
   await dialog().getByRole("button", { name: "Cerrar", exact: true }).click();
+  await page.getByRole("navigation").getByRole("link", { name: "Inventario", exact: true }).click();
+  await page.getByRole("heading", { name: "Inventario", exact: true }).waitFor();
+  await page.getByLabel("Buscar", { exact: true }).fill(product.code);
+  assert.equal(await page.locator("#listing tbody tr td").nth(2).textContent(), "2");
+  await page.reload();
+  await page.getByLabel("Buscar", { exact: true }).fill(product.code);
+  assert.equal(await page.locator("#listing tbody tr td").nth(2).textContent(), "2");
+  await page.getByRole("navigation").getByRole("link", { name: "Facturas de compra", exact: true }).click();
+  await page.getByRole("button", { name: "Importar XML", exact: true }).waitFor();
   await page.reload();
   await page.getByRole("button", { name: "Ver", exact: true }).waitFor();
   await page.screenshot({ path: "test-results/compras-xml.png", fullPage: true });

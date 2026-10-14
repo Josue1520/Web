@@ -15,7 +15,7 @@ El acceso directo al sitio de Carbon y al CDN de esquemas estuvo bloqueado desde
 La expresión «vibe coding» no es una categoría técnica verificable. Aquí se interpretó como evitar una presentación de plantilla con adornos repetidos que compiten con las tareas del negocio.
 
 - Recuperar los colores de la primera versión: azul #1f5a99, azul oscuro #153c66, blanco y fondo #f3f6fa. El usuario pidió sustituir el estilo salvia. Se eliminó el bloque del tema anterior y se creó un sistema visual de superficies planas, líneas divisorias y controles compactos.
-- Reemplazar el menú lateral por navegación superior agrupada. Mostrar indicadores en una franja y reunir filtros/tablas en una superficie de consulta. En caja, priorizar artículos, dejar cliente debajo y mantener cobro a la derecha. En móvil, la navegación y las tablas admiten desplazamiento horizontal sin desbordar la página.
+- Usar barra lateral agrupada, según la preferencia del usuario y la cantidad de módulos. Mantener el mismo orden en todas las pantallas y marcar la sección activa. Mostrar indicadores en una franja y reunir filtros/tablas en una superficie de consulta. En caja, priorizar artículos, dejar cliente debajo y mantener cobro a la derecha. En móvil, el menú se abre con un control nativo de navegación y las tablas admiten desplazamiento horizontal sin desbordar la página.
 - Alinear importes y cantidades a la derecha, usar cifras tabulares y encabezados cortos. Los estados de pago combinan texto y color.
 - Dar a Facturas de compra dos acciones explícitas: registro manual e importación XML. La revisión muestra primero emisor, consecutivo y total; después el detalle y sus asociaciones; finalmente inventario y pago.
 - Solicitar una revisión de unidades/presentaciones y destinatario antes de importar. El catálogo no permite deducir automáticamente que una caja del proveedor equivale a una unidad de venta.
@@ -55,3 +55,21 @@ Por línea: impuestos netos = suma de impuestos menos exoneraciones menos impues
 El importe de IVA mostrado es posterior a exoneraciones y anterior al ajuste agregado de impuestos asumidos, que se resta en su propia fila; el desglose no atribuye ese ajuste a un impuesto particular sin información del emisor. No se calcula crédito fiscal ni validez de una exoneración. Los parámetros específicos permanecen en el XML original. El inventario se valora con neto de mercadería, sin distribuir impuestos ni cargos.
 
 Las pruebas incluyen un documento sintético con IVA, impuesto de bebidas, exoneración, impuesto asumido, transporte e IVA devuelto, otro con base imponible compuesta y casos inconsistentes rechazados sin cambios parciales. La captura del usuario permite identificar el rechazo anterior, pero no proporciona el contenido del XML real: todavía no se ha probado ese archivo específico.
+
+
+## Revisión: navegación e identidad visual
+
+Fuentes adicionales consultadas el 13 de octubre de 2026:
+
+- **Carbon, UI shell left panel**: [documentación](https://carbondesignsystem.com/components/UI-shell-left-panel/usage/) y [fuente consultada](https://github.com/carbon-design-system/carbon-website/blob/main/src/pages/components/UI-shell-left-panel/usage.mdx). Recomienda panel izquierdo cuando existen más de cinco secciones secundarias o cuando el usuario cambia frecuentemente entre ellas. SIPRO tiene diez módulos y el usuario prefiere ese panel: se recupera una barra lateral persistente y agrupada.
+- **W3C, Understanding Consistent Navigation (3.2.3)**: [documentación](https://www.w3.org/WAI/WCAG22/Understanding/consistent-navigation.html) y [fuente consultada](https://github.com/w3c/wcag/blob/main/understanding/20/consistent-navigation.html). Explica cómo el orden estable de controles facilita la orientación y la memoria espacial. Se mantiene un orden fijo de módulos y una indicación textual y visual de la página activa.
+
+Estas referencias describen usabilidad y accesibilidad, no un detector de interfaces hechas con IA. La interpretación aplicada de «que no parezca IA» es dar prioridad al trabajo del comercio: nombres específicos, datos reales, mensajes que expliquen el resultado, una paleta azul estable, jerarquía consistente y ausencia de adornos o estadísticas inventadas. No se afirma conformidad completa con WCAG a partir de estas decisiones.
+
+La barra lateral conserva los azules originales. En móvil se convierte en menú plegable con `details/summary`, operable con teclado; al entrar en otra sección se pliega para dejar espacio al contenido. No se duplica la navegación ni se dejan controles ocultos accesibles al teclado.
+
+## Evidencia del ingreso de inventario
+
+La regla existente de compra directa ya incrementaba existencias dentro de la misma transacción que guarda la factura. Se conserva y ahora se registra además un comprobante de movimiento por producto, con saldo anterior, cantidad ingresada, saldo posterior e identificador del movimiento. El detalle presenta ese resultado después de guardar, tanto para XML como para compra manual. No son saldos actuales calculados retroactivamente: permanecen iguales si hay ventas posteriores.
+
+Una factura vinculada a un pedido recibido registra explícitamente ese origen y no repite movimientos. En facturas anteriores a esta ampliación se mantiene el historial disponible, sin inventar saldos históricos. Las pruebas comprueban la entrada, la vinculación sin duplicados, la recuperación desde SQLite y la existencia mostrada en la pantalla de Inventario después de importar y recargar.

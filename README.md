@@ -38,7 +38,7 @@ Estas cuentas contienen datos ficticios para la presentación. En **Usuarios** p
 
 ## Caja, ventas guardadas y tickets
 
-La interfaz recupera el **azul de la primera versión** (#1f5a99 y #153c66), con una distribución nueva: navegación superior agrupada, resumen en una franja de indicadores, buscadores integrados con sus tablas y formularios de superficies planas. La caja prioriza la entrada de artículos y coloca el cliente debajo; el panel de cobro permanece a la derecha en escritorio. Acceso, catálogo, compras, reportes y diálogos comparten el nuevo sistema visual. Las [decisiones y fuentes](docs/DISENO-IMPORTACION-XML.md) explican los cambios. Conserva la identidad de SIPRO; no es una integración ni una reproducción oficial de Qupos.
+La interfaz recupera el **azul de la primera versión** (#1f5a99 y #153c66), con una distribución nueva: barra lateral agrupada, plegable en móvil, resumen en una franja de indicadores, buscadores integrados con sus tablas y formularios de superficies planas. La caja prioriza la entrada de artículos y coloca el cliente debajo; el panel de cobro permanece a la derecha en escritorio. Acceso, catálogo, compras, reportes y diálogos comparten el nuevo sistema visual. Las [decisiones y fuentes](docs/DISENO-IMPORTACION-XML.md) explican los cambios. Conserva la identidad de SIPRO; no es una integración ni una reproducción oficial de Qupos.
 
 ![Pantalla de caja de SIPRO](docs/capturas/caja.png)
 
@@ -67,6 +67,8 @@ Elige el origen correcto:
 
 - **Compra directa:** mercadería que ya recibiste sin un pedido registrado. Guardar la factura suma las cantidades al inventario y actualiza el costo promedio sin IVA, incluyendo el descuento. No uses esta opción si esa mercadería ya se ingresó al inventario.
 - **Pedido recibido:** selecciona el pedido previamente recibido del proveedor. Se cargan sus productos y cantidades; puedes ingresar los costos e impuestos del comprobante. Guardar la factura **no vuelve a sumar existencias ni modifica el costo promedio que dejó la recepción**. Cada pedido completo admite una factura; no se incluyen facturas parciales ni agrupación de varios pedidos.
+
+Las compras directas nuevas guardan una confirmación de inventario con **cantidad anterior, unidades ingresadas y cantidad posterior por producto**. La encontrarás al abrir el detalle de la factura; refleja el momento del registro. Las facturas vinculadas a pedidos recibidos indican que sus existencias ya se ingresaron, para evitar duplicarlas. Las facturas antiguas conservan sus movimientos originales.
 
 Puedes indicar **Pagada** o **Pendiente**, con fecha de vencimiento para compras a crédito. El detalle permite registrar el pago completo e imprimir/guardar el registro como PDF. El pago es un registro interno: no realiza una transferencia bancaria. El dependiente puede consultar las facturas, pero solo el administrador puede registrarlas o marcarlas como pagadas.
 

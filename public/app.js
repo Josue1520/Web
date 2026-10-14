@@ -97,7 +97,7 @@ const statusBadge = (s) =>
 const button = (label, action, id = "", style = "") =>
   `<button type="button" class="btn ${style}" data-action="${action}" data-id="${id}">${label}</button>`;
 const table = (heads, rows, empty = "No hay registros para mostrar.") => {
-  const numeric = heads.map((h) => /^(Cantidad|Costo.*|Precio.*|Total|IVA.*|Importe|Exonerado|Neto|Impuestos.*|Otros impuestos|Otros cargos|Descuento|Existencias|Stock.*|Mínimo|Subtotal|Entradas|Salidas|Utilidad.*)$/.test(h));
+  const numeric = heads.map((h) => /^(Cantidad|Costo.*|Precio.*|Total|IVA.*|Importe|Exonerado|Neto|Impuestos.*|Otros impuestos|Otros cargos|Descuento|Existencias?|Antes|Ingresadas|Después|Saldo|Stock.*|Mínimo|Subtotal|Entradas|Salidas|Utilidad.*)$/.test(h));
   return `<div class="table-wrap"><table><thead><tr>${heads.map((h, i) => `<th scope="col"${numeric[i] ? ' class="numeric"' : ""}>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.length ? rows.map((row) => {
     let i = 0;
     return row.replace(/<td>/g, () => `<td${numeric[i++] ? ' class="numeric"' : ""}>`);
@@ -155,10 +155,10 @@ function shell() {
   ].map(([group, keys]) => `<div class="nav-group"><span class="nav-caption">${group}</span><div>${keys
     .filter((key) => key !== "users" || isAdmin())
     .map((key) => `<a href="#${key}" class="${currentPage === key ? "active" : ""}" ${currentPage === key ? 'aria-current="page"' : ""}>${icon(key)}${modules.find((m) => m[0] === key)[1]}</a>`).join("")}</div></div>`).join("");
+  const label = modules.find((m) => m[0] === currentPage)?.[1] || "Resumen";
   $("#app").innerHTML = `<div class="shell">
-    <header class="workspace-header"><div class="workspace-bar">${brand}<span class="business-label">Mini súper / Licorera</span><div class="user-info"><div class="avatar">${esc(state.me.name[0])}${esc(state.me.surname[0])}</div><div><b>${esc(state.me.name)}</b><small>${esc(state.me.role)}</small></div>${button(`${icon("logout")} Salir`, "logout", "", "plain small")}</div></div>
-    <nav class="nav-links" aria-label="Módulos">${navigation}</nav></header>
-    <div class="main-wrap"><main class="content" id="content"></main><footer class="workspace-footer"><span>SIPRO · Sistema de gestión</span><span>${date(state.today)} · Costa Rica</span></footer></div></div>`;
+    <aside class="workspace-sidebar">${brand}<details id="workspace-menu" ${matchMedia("(min-width: 761px)").matches ? "open" : ""}><summary>Menú de navegación</summary><nav class="nav-links" aria-label="Módulos">${navigation}</nav></details><div class="sidebar-business"><b>Mini súper / Licorera</b><span>Sistema de pedidos a proveedores</span></div></aside>
+    <div class="main-wrap"><header class="workspace-bar"><div class="workspace-location">Mi negocio <span>/</span> <strong>${esc(label)}</strong></div><div class="user-info"><div class="avatar">${esc(state.me.name[0])}${esc(state.me.surname[0])}</div><div><b>${esc(state.me.name)}</b><small>${esc(state.me.role)}</small></div>${button(`${icon("logout")} Salir`, "logout", "", "plain small")}</div></header><main class="content" id="content"></main><footer class="workspace-footer"><span>SIPRO · Sistema de gestión</span><span>${date(state.today)} · Costa Rica</span></footer></div></div>`;
 }
 function render() {
   if (!state) return login();
@@ -1330,7 +1330,7 @@ function importPurchaseXml() {
       try {
         const invoice = await api("purchase-invoices/xml", "POST", { xml, mappings, orderId: source, status: payment, dueDate, notes });
         $("#modal").close(); await reload(); viewPurchaseInvoice(invoice.id);
-        toast("Factura importada. El XML original quedó guardado.");
+        toast(invoice.orderId ? "Factura vinculada al pedido recibido. Las existencias no se duplicaron." : "Factura importada e inventario actualizado. Revisa las cantidades ingresadas en el detalle.");
       } catch (error) { $(".error", form).textContent = error.message; }
       finally { btn.disabled = !supplier?.active; }
     };
@@ -1545,7 +1545,15 @@ function purchaseInvoiceContent(i) {
         ]),
       ),
     )}
-    ${purchaseTaxDetail(i)}<p>${esc(i.notes)}</p>`;
+    ${purchaseTaxDetail(i)}${purchaseStockReceipt(i)}<p>${esc(i.notes)}</p>`;
+}
+function purchaseStockReceipt(i) {
+  if (i.orderId) return `<div class="stock-receipt"><h3>Inventario registrado al recibir el pedido</h3><p>Esta factura está vinculada a ${idLabel("PED", i.orderId)}. Las cantidades ya ingresaron con su recepción y no se sumaron otra vez.</p></div>`;
+  const receipt = i.inventoryReceipt;
+  if (!receipt?.entries?.length) return `<p class="form-help">Compra directa: la mercadería se ingresó al guardar la factura. Consulta el movimiento de compra en Inventario.</p>`;
+  return `<section class="stock-receipt"><h3>Entrada de inventario confirmada</h3><p>Saldos al registrar esta compra el ${date(i.registered)}. Los movimientos posteriores pueden cambiar la existencia actual.</p>${table(["Producto", "Antes", "Ingresadas", "Después"], receipt.entries.map((e) => tr([
+    `${esc(e.name)}<small>${esc(e.code)}</small>`, e.before, `+${e.quantity}`, e.after,
+  ])))}</section>`;
 }
 function viewPurchaseInvoice(id) {
   const i = state.purchaseInvoices.find((i) => i.id === Number(id));
@@ -1695,4 +1703,9 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     $("#sale-form")?.requestSubmit();
   }
+});
+
+matchMedia("(min-width: 761px)").addEventListener("change", (e) => {
+  const menu = $("#workspace-menu");
+  if (menu) menu.open = e.matches;
 });
