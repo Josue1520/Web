@@ -38,3 +38,11 @@ El tema abarca acceso, resumen, caja, historial de ventas, pedidos, facturas de 
 Se ejecutaron los cuatro recorridos existentes de navegador: operaciones generales con tickets/PDF y Excel, importación XML, recomendaciones de pedidos y dashboard. Se revisaron capturas de escritorio, diálogos y móvil generadas con bases temporales. Las referencias de color no equivalen a una certificación completa de accesibilidad.
 
 [Dashboard](capturas/dashboard-ventas.png) · [Caja](capturas/caja.png) · [Acceso](capturas/acceso.png) · [Móvil](capturas/dashboard-ventas-movil.png)
+
+## Dashboard según las capturas aportadas
+
+La revisión posterior usa las seis capturas del usuario como referencia visual: indicadores en cuatro columnas y paneles de análisis a todo el ancho. Se añaden ventas anuales por mes, utilidad bruta estimada para administradores, ventas por hora y selección de colones/unidades/facturas en la semana. Se conserva la paleta azul y se usan gráficos planos con tablas alternativas de datos.
+
+El Top 10 sustituye el gráfico circular con etiquetas apretadas por una tabla ordenada con barras horizontales, cantidades, importes y porcentajes. Incluye acceso directo, fechas desde/hasta y consulta general o por proveedor. Su rango es independiente de los otros gráficos. Los resultados muestran siempre el rango y proveedor efectivamente consultados, incluso si después se editan los campos.
+
+No se reproducen cifras, metas comerciales ni sucursales de las capturas: las estadísticas corresponden a la instalación de SIPRO. Los totales de ventas del negocio ya se muestran en las tarjetas y el resumen. La utilidad es una estimación con costos históricos, no ganancia neta. Las facturas sin hora o costos completos se identifican sin inventar información.

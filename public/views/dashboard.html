@@ -7,7 +7,11 @@
         <h1>Resumen del negocio</h1>
         <p>Ventas, cobros y productos en un solo lugar.</p>
       </div>
-      <a href="#invoices" class="btn primary">＋ Nueva factura</a>
+      <div class="page-actions">
+        <button type="button" class="btn" id="jump-top-products">
+          Ver Top 10</button
+        ><a href="#invoices" class="btn primary">＋ Nueva factura</a>
+      </div>
     </header>
     <div class="dashboard-toolbar">
       <div
@@ -15,18 +19,34 @@
         role="group"
         aria-label="Período de ventas"
       >
-        {{{dayButton}}}{{{weekButton}}}{{{monthButton}}}
+        {{{dayButton}}}{{{weekButton}}}{{{monthButton}}}{{{rangeButton}}}
       </div>
       {{{dateField}}}
       <button type="button" class="btn" id="refresh-dashboard">
         Actualizar
       </button>
     </div>
+    <form
+      id="dashboard-range-form"
+      class="dashboard-inline-filters"
+      {{{rangeHidden}}}
+    >
+      {{{fromField}}}{{{toField}}}
+      <button type="submit" class="btn primary">
+        Consultar ventas y pagos
+      </button>
+    </form>
     <p id="dashboard-feedback" class="dashboard-feedback" role="status">
       Cargando estadísticas…
     </p>
     <p class="error" id="dashboard-error" role="alert"></p>
     <div id="dashboard-results"></div>
+    <section
+      id="dashboard-product-ranking"
+      class="dashboard-panel"
+      aria-labelledby="top-products-title"
+      aria-busy="true"
+    ></section>
   </section>
 </template>
 
@@ -51,10 +71,25 @@
 <template id="dashboard-content">
   <div class="dashboard-metrics">{{{summaryCards}}}</div>
   <p class="dashboard-scope-note">
-    Los indicadores superiores muestran el día, la semana y el mes de la fecha
-    elegida. El detalle inferior aplica los días seleccionados. Semana de lunes
-    a domingo.
+    Los indicadores superiores muestran el día, la semana, el mes y el año de la
+    fecha elegida. El detalle inferior aplica los días seleccionados. Semana de
+    lunes a domingo. El Top 10 tiene sus propios filtros, más abajo.
   </p>
+  <section
+    class="dashboard-panel dashboard-monthly"
+    aria-labelledby="annual-sales-title"
+  >
+    <header class="dashboard-panel-heading">
+      <div>
+        <h2 id="annual-sales-title">Ventas del año por meses</h2>
+        <p>Importes con IVA, después de descuentos</p>
+      </div>
+    </header>
+    <form id="dashboard-year-form" class="dashboard-inline-filters">
+      {{{yearField}}}<button type="submit" class="btn">Buscar año</button>
+    </form>
+    {{{annualSales}}} {{{annualProfit}}}
+  </section>
   <section class="dashboard-selection" aria-label="Resumen de la selección">
     <div>
       <span>VENTAS DE LA SELECCIÓN</span
@@ -89,7 +124,7 @@
           <h2 id="weekly-sales-title">Ventas de la semana</h2>
           <p>{{{weekRange}}}</p>
         </div>
-        <span class="dashboard-unit">CRC · IVA incluido</span>
+        <div class="dashboard-metric-selector">{{{weekMetric}}}</div>
       </header>
       {{{dayControls}}}
       <div
@@ -119,34 +154,23 @@
       </p>
     </section>
   </div>
-  <div class="dashboard-ranking-grid">
-    <section class="dashboard-panel" aria-labelledby="top-products-title">
-      <header class="dashboard-panel-heading">
-        <div>
-          <h2 id="top-products-title">Artículos más vendidos</h2>
-          <p>
-            Los 10 primeros por unidades · {{{productCount}}} artículos vendidos
-          </p>
-        </div>
-      </header>
-      <div id="dashboard-top-products">{{{productTable}}}</div>
-    </section>
-    <section class="dashboard-panel" aria-labelledby="supplier-products-title">
-      <header class="dashboard-panel-heading">
-        <div>
-          <h2 id="supplier-products-title">Más vendidos por proveedor</h2>
-          <p>Artículos asociados en el catálogo actual</p>
-        </div>
-      </header>
-      <div class="dashboard-supplier-filter">{{{supplierSelect}}}</div>
-      <div id="dashboard-supplier-ranking">{{{supplierRanking}}}</div>
-      <p class="dashboard-chart-help">
-        Se muestran 3 artículos por proveedor o hasta 10 al elegir uno. Un
-        artículo con varios proveedores aparece en cada catálogo; esos grupos no
-        se suman entre sí ni identifican quién entregó cada unidad.
-      </p>
-    </section>
-  </div>
+  <section
+    class="dashboard-panel dashboard-hourly"
+    aria-labelledby="hourly-sales-title"
+  >
+    <header class="dashboard-panel-heading">
+      <div>
+        <h2 id="hourly-sales-title">Cantidad de ventas por hora</h2>
+        <p>Facturas de la selección · hora de Costa Rica</p>
+      </div>
+    </header>
+    <div class="dashboard-inline-filters">{{{hourRange}}}</div>
+    {{{hourlyChart}}}
+    <p class="dashboard-chart-help">
+      {{{unknownTime}}} facturas sin hora registrada quedan fuera del gráfico.
+      En rangos de varios días se suman las ventas de cada franja horaria.
+    </p>
+  </section>
   <footer class="dashboard-operations">
     <a href="#inventory"
       ><strong>{{{low}}}</strong> productos en mínimo o agotados
@@ -189,9 +213,8 @@
 
 <template id="dashboard-week-context">
   <p class="dashboard-chart-help">
-    El gráfico muestra la semana de referencia. El detalle de pagos y artículos
-    corresponde al período elegido arriba. Pulsa una barra para pasar a
-    selección semanal.
+    El gráfico muestra la semana de referencia. El detalle de pagos corresponde
+    al período elegido arriba. Pulsa una barra para pasar a selección semanal.
   </p>
 </template>
 
@@ -252,18 +275,137 @@
   </div>
 </template>
 
-<template id="dashboard-supplier">
-  <section class="dashboard-supplier-group">
-    <header>
-      <h3>{{{name}}}</h3>
-      <span>{{{units}}} unidades</span>
-    </header>
-    {{{detail}}}
-  </section>
-</template>
-
-<template id="dashboard-no-supplier-sales">
-  <p class="empty">
-    No hay ventas de artículos asociados a este proveedor en la selección.
+<template id="dashboard-profit">
+  <header class="dashboard-panel-heading">
+    <div>
+      <h2>Utilidad bruta estimada por mes</h2>
+      <p>
+        Ingresos sin IVA menos costo histórico de los productos vendidos · solo
+        administradores
+      </p>
+    </div>
+  </header>
+  {{{chart}}}
+  <p class="dashboard-chart-help">
+    No descuenta alquiler, salarios ni otros gastos. Un mes sin costos
+    históricos completos aparece como no disponible, no como cero.
   </p>
 </template>
+
+<template id="dashboard-line-chart">
+  <p class="dashboard-line-hint">
+    Desliza el gráfico para ver todos los períodos, o abre la tabla de datos.
+  </p>
+  <div
+    class="dashboard-line-scroll"
+    tabindex="0"
+    aria-label="Gráfico desplazable: {{{label}}}"
+  >
+    <svg
+      class="dashboard-line-svg"
+      viewBox="0 0 960 245"
+      role="img"
+      aria-label="{{{label}}}"
+    >
+      {{{grid}}}{{{paths}}}{{{points}}}
+    </svg>
+  </div>
+  <details class="dashboard-chart-data">
+    <summary>Ver datos del gráfico</summary>
+    {{{dataTable}}}
+  </details>
+</template>
+<template id="dashboard-line-path"
+  ><path class="dashboard-area" d="{{{area}}}"></path
+  ><path class="dashboard-line" d="{{{line}}}"></path
+></template>
+<template id="dashboard-line-grid"
+  ><line
+    class="dashboard-gridline"
+    x1="95"
+    x2="925"
+    y1="{{{y}}}"
+    y2="{{{y}}}"
+  ></line
+  ><text x="83" y="{{{y}}}" class="dashboard-axis-label"
+    >{{{amount}}}</text
+  ></template
+>
+<template id="dashboard-line-point"
+  ><circle class="dashboard-point" cx="{{{x}}}" cy="{{{y}}}" r="4" {{{hidden}}}
+    ><title>{{{title}}}</title></circle
+  ><text class="dashboard-x-label" x="{{{x}}}" y="228"
+    >{{{label}}}</text
+  ></template
+>
+
+<template id="dashboard-ranking-shell">
+  <header class="dashboard-panel-heading">
+    <div>
+      <h2 id="top-products-title" tabindex="-1">
+        Top 10 productos más vendidos
+      </h2>
+      <p>
+        Mes actual por defecto · consulta general o por proveedor y fechas a tu
+        elección
+      </p>
+    </div>
+    <span class="dashboard-unit">Ordenado por unidades</span>
+  </header>
+  <form id="ranking-filters" class="dashboard-ranking-filters">
+    {{{fromField}}}{{{toField}}}{{{supplierField}}}
+    <button class="btn primary" type="submit">Consultar Top 10</button>
+  </form>
+  <div class="dashboard-ranking-presets">
+    <button class="btn small" type="button" data-ranking-preset="month">
+      Este mes</button
+    ><button class="btn small" type="button" data-ranking-preset="previous">
+      Mes anterior</button
+    ><button class="btn small" type="button" data-ranking-preset="30">
+      Últimos 30 días
+    </button>
+  </div>
+  <p id="ranking-status" class="dashboard-ranking-status" role="status"></p>
+  <p id="ranking-error" class="error" role="alert"></p>
+  <div id="ranking-results"></div>
+  <p class="dashboard-chart-help">
+    El proveedor corresponde a la asociación actual del producto en el catálogo.
+    Un artículo compartido puede aparecer al consultar distintos proveedores,
+    pero se cuenta una sola vez en General. Estos filtros solo afectan al Top
+    10.
+  </p>
+</template>
+
+<template id="dashboard-ranking-result">
+  <div class="dashboard-ranking-summary">
+    <div><strong>{{{scope}}}</strong><span>{{{range}}}</span></div>
+    <div><strong>{{{units}}}</strong><span>unidades en el rango</span></div>
+    <div>
+      <strong>{{{total}}}</strong
+      ><span>ventas de todos los artículos del filtro</span>
+    </div>
+    <div><strong>{{{count}}}</strong><span>artículos distintos</span></div>
+  </div>
+  <p class="dashboard-ranking-leader">
+    Más vendido: <strong>{{{leader}}}</strong>
+  </p>
+  <div id="dashboard-top-products">{{{rows}}}</div>
+  <p class="dashboard-chart-help">
+    {{{other}}} El porcentaje usa todas las unidades del rango y proveedor, no
+    solo las del Top 10. Importes con IVA y descuentos; se excluyen ventas
+    anuladas.
+  </p>
+</template>
+
+<template id="dashboard-ranking-units"
+  ><span class="dashboard-ranking-units"
+    >{{{units}}}<meter
+      min="0"
+      max="{{{max}}}"
+      value="{{{units}}}"
+      aria-label="Unidades vendidas de {{{name}}}"
+    >
+      {{{units}}}
+    </meter></span
+  ></template
+>

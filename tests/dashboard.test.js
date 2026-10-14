@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { salesDashboard } from "../src/models/dashboard.js";
+import { salesDashboard, dashboardProducts } from "../src/models/dashboard.js";
 import { createApp } from "../server.js";
 
 const sale = (
@@ -241,6 +241,7 @@ test("dashboard API: sesión requerida, ambos roles consultan y anular una venta
       };
     };
     assert.equal((await fetch(base + "dashboard")).status, 401);
+    assert.equal((await fetch(base + "dashboard/products")).status, 401);
     const admin = await login("admin", "Admin123!");
     const response = await fetch(base + "invoices", {
       method: "POST",
@@ -265,6 +266,19 @@ test("dashboard API: sesión requerida, ambos roles consultan y anular una venta
     assert.equal(result.payments[0].total, 2430);
     assert.equal(result.topProducts[0].units, 2);
     assert.equal(result.supplierRanking[0].supplierId, 2);
+    assert.equal(Object.hasOwn(result.annual.months[0], "profit"), false);
+    const adminDashboard = await (
+      await fetch(base + "dashboard", { headers: admin })
+    ).json();
+    assert.equal(
+      Object.hasOwn(adminDashboard.annual.months[0], "profit"),
+      true,
+    );
+    const ranking = await (
+      await fetch(base + "dashboard/products", { headers: employee })
+    ).json();
+    assert.equal(ranking.products[0].units, 2);
+    assert.equal(ranking.total, 2430);
     assert.equal(
       (await fetch(base + "dashboard?days=9", { headers: employee })).status,
       400,
@@ -284,4 +298,165 @@ test("dashboard API: sesión requerida, ambos roles consultan y anular una venta
     await new Promise((resolve) => server.close(resolve));
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test("Top 10: mes actual por defecto, fechas inclusivas y proveedor sin duplicar el general", () => {
+  const state = fixture();
+  const rank = (filters = {}) =>
+    dashboardProducts(state, new URLSearchParams(filters), "2026-10-14");
+  assert.equal(rank().from, "2026-10-01");
+  assert.equal(rank().to, "2026-10-14");
+  assert.equal(rank().total, 500);
+  const general = rank({ from: "2026-10-05", to: "2026-10-11" });
+  assert.equal(general.total, 400);
+  assert.equal(general.units, 7);
+  assert.equal(general.products[0].name, "Café");
+  const supplier = rank({
+    from: "2026-10-05",
+    to: "2026-10-11",
+    supplierId: "1",
+  });
+  assert.equal(supplier.total, 140);
+  assert.equal(supplier.units, 3);
+  assert.equal(supplier.products.length, 1);
+  assert.equal(supplier.products[0].share, 100);
+  assert.equal(
+    rank({ from: "2026-10-05", to: "2026-10-11", supplierId: "2" }).total,
+    400,
+  );
+  assert.equal(rank({ from: "2026-10-07", to: "2026-10-07" }).total, 50);
+  assert.equal(
+    rank({ from: "2026-10-08", to: "2026-10-08" }).products.length,
+    0,
+  );
+  assert.equal(rank({ supplierId: "3" }).products.length, 0);
+});
+
+test("Top 10: diez filas, empates deterministas y porcentaje sobre todos los artículos", () => {
+  const state = fixture();
+  state.invoices = [];
+  state.products = [];
+  for (let id = 1; id <= 12; id++) {
+    state.products.push({
+      id,
+      name: `Producto ${id}`,
+      code: `P${id}`,
+      offers: [{ supplierId: 1 }, { supplierId: 2 }],
+    });
+    state.invoices.push(sale("2026-10-07", 10, "Efectivo", id, 1));
+  }
+  const result = dashboardProducts(state, new URLSearchParams(), "2026-10-14");
+  assert.equal(result.productCount, 12);
+  assert.equal(result.products.length, 10);
+  assert.equal(result.units, 12);
+  assert.equal(result.otherUnits, 2);
+  assert.deepEqual(
+    result.products.map((p) => p.productId),
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  );
+  assert.ok(Math.abs(result.products[0].share - 100 / 12) < 1e-10);
+});
+
+test("Top 10: rechaza rangos invertidos, fechas inexistentes, futuras y proveedores ajenos", () => {
+  for (const filter of [
+    { from: "2026-10-10", to: "2026-10-01" },
+    { from: "2026-02-30" },
+    { to: "2026-10-15" },
+    { from: "2026-08-31" },
+    { supplierId: "999" },
+    { supplierId: "x" },
+  ])
+    assert.throws(
+      () =>
+        dashboardProducts(fixture(), new URLSearchParams(filter), "2026-10-14"),
+      (e) => e.status === 400,
+    );
+});
+
+test("Dashboard: rango personalizado, año mensual y utilidad con costos históricos y pérdidas", () => {
+  const state = fixture();
+  state.invoices = [
+    sale("2026-09-30", 113, "Efectivo", 1, 1, {
+      subtotal: 100,
+      items: [{ productId: 1, qty: 1, total: 113, cost: 120 }],
+    }),
+    sale("2026-10-01", 226, "Tarjeta", 1, 2, {
+      subtotal: 200,
+      items: [{ productId: 1, qty: 2, total: 226, cost: 50 }],
+    }),
+  ];
+  const options = new URLSearchParams({
+    date: "2026-10-07",
+    period: "range",
+    from: "2026-09-30",
+    to: "2026-10-01",
+    days: "",
+  });
+  const result = salesDashboard(state, options, "2026-10-14", {
+    includeProfit: true,
+  });
+  assert.equal(result.selected.total, 339);
+  assert.equal(result.eligibleDays, 2);
+  assert.equal(result.summaries.year.total, 339);
+  assert.equal(result.annual.months.length, 12);
+  assert.equal(result.annual.months[8].profit, -20);
+  assert.equal(result.annual.months[9].profit, 100);
+  assert.equal(result.annual.months[10].available, false);
+  assert.equal(result.week.days[0].units, 0);
+  delete state.invoices[1].items[0].cost;
+  assert.equal(
+    salesDashboard(state, options, "2026-10-14", { includeProfit: true }).annual
+      .months[9].profit,
+    null,
+  );
+  assert.throws(
+    () =>
+      salesDashboard(
+        state,
+        new URLSearchParams({ year: "2027" }),
+        "2026-10-14",
+      ),
+    (e) => e.status === 400,
+  );
+  assert.throws(
+    () =>
+      salesDashboard(
+        state,
+        new URLSearchParams({
+          period: "range",
+          from: "2026-10-10",
+          to: "2026-10-01",
+        }),
+        "2026-10-14",
+      ),
+    (e) => e.status === 400,
+  );
+});
+
+test("Dashboard: horas de Costa Rica, facturas sin hora y unidades de la semana", () => {
+  const state = fixture();
+  state.invoices = [
+    sale("2026-10-07", 10, "Efectivo", 1, 3, {
+      issuedAt: "2026-10-07T06:15:00.000Z",
+    }),
+    sale("2026-10-07", 20, "SINPE", 2, 4, {
+      issuedAt: "2026-10-08T05:59:00.000Z",
+    }),
+    sale("2026-10-07", 30),
+    sale("2026-10-07", 40, "Tarjeta", 1, 1, { issuedAt: "invalid" }),
+    sale("2026-10-07", 999, "Tarjeta", 1, 1, {
+      status: "Anulada",
+      issuedAt: "2026-10-07T06:00:00.000Z",
+    }),
+  ];
+  const result = calculate({ period: "day" }, state);
+  assert.equal(result.hourly.hours[0].count, 1);
+  assert.equal(result.hourly.hours[23].total, 20);
+  assert.equal(result.hourly.unknownTime, 2);
+  assert.equal(
+    result.hourly.hours.reduce((sum, h) => sum + h.count, 0) +
+      result.hourly.unknownTime,
+    result.selected.count,
+  );
+  assert.equal(result.week.days[2].units, 9);
 });

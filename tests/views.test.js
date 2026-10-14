@@ -31,7 +31,7 @@ test("todas las plantillas HTML cargan, incluidas las compactadas en una línea"
   let rendered = 0;
   for (const source of sources.values()) {
     for (const [, id, html] of source.matchAll(
-      /<template id="([\w-]+)">([\s\S]*?)<\/template>/g,
+      /<template\s+id="([\w-]+)"\s*>([\s\S]*?)<\/template\s*>/g,
     )) {
       const bindings = Object.fromEntries(
         [...html.matchAll(/\{\{\{(\w+)\}\}\}/g)].map((match) => [
@@ -46,6 +46,18 @@ test("todas las plantillas HTML cargan, incluidas las compactadas en una línea"
   assert.ok(
     rendered > 100,
     "se verificaron las vistas reales de todos los módulos",
+  );
+  assert.equal(
+    rendered,
+    [...sources.values()].reduce(
+      (sum, source) => sum + [...source.matchAll(/<template\b/g)].length,
+      0,
+    ),
+    "incluye aperturas y cierres de template divididos en varias líneas",
+  );
+  assert.match(
+    view("dashboard-line-path", { area: "M0,0 Z", line: "M0,0 L1,1" }),
+    /dashboard-line/,
   );
   assert.match(view("edit-product-2", { esc: "COD-01" }), /value="COD-01"/);
   assert.throws(() => view("no-existe"), /Vista no disponible/);

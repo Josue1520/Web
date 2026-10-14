@@ -12,7 +12,7 @@ export async function loadTemplates(collections) {
   );
   for (const source of sources) {
     for (const match of source.matchAll(
-      /<template id="([\w-]+)">([\s\S]*?)<\/template>/g,
+      /<template\s+id="([\w-]+)"\s*>([\s\S]*?)<\/template\s*>/g,
     )) {
       if (templates.has(match[1]))
         throw new Error(`Vista duplicada: ${match[1]}`);

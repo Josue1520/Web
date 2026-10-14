@@ -1,16 +1,9 @@
 import { model } from "../models/app-model.js";
 import { dashboardFilters, loadDashboard } from "../models/dashboard-model.js";
-import {
-  $,
-  crc,
-  date,
-  esc,
-  field,
-  select,
-  table,
-  tr,
-} from "../views/components.js";
+import { $, crc, date, esc, field, select } from "../views/components.js";
 import { view } from "../views/template.js";
+import { lineChart } from "../views/dashboard-charts.js";
+import { productRanking } from "./dashboard-products.js";
 
 const days = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const fullDays = [
@@ -22,7 +15,12 @@ const fullDays = [
   "Sábado",
   "Domingo",
 ];
-const periodNames = { day: "Día", week: "Semana", month: "Mes" };
+const periodNames = {
+  day: "Día",
+  week: "Semana",
+  month: "Mes",
+  range: "Rango",
+};
 
 export function dashboard() {
   const filters = dashboardFilters();
@@ -30,6 +28,22 @@ export function dashboard() {
     dayButton: periodButton("day", filters),
     weekButton: periodButton("week", filters),
     monthButton: periodButton("month", filters),
+    rangeButton: periodButton("range", filters),
+    rangeHidden: filters.period === "range" ? "" : "hidden",
+    fromField: field(
+      "salesFrom",
+      "Desde · Ventas y pagos",
+      filters.from,
+      "date",
+      `required min="${model.state.started}" max="${model.state.today}"`,
+    ),
+    toField: field(
+      "salesTo",
+      "Hasta · Ventas y pagos",
+      filters.to,
+      "date",
+      `required min="${model.state.started}" max="${model.state.today}"`,
+    ),
     dateField: field(
       "dashboardDate",
       "Fecha de referencia",
@@ -39,10 +53,13 @@ export function dashboard() {
     ),
   });
   const root = $("#sales-dashboard");
+  productRanking($("#dashboard-product-ranking", root));
+  let lastData;
   let request = 0;
   async function refresh(focusKey) {
     const revision = ++request;
     root.setAttribute("aria-busy", "true");
+    $("#dashboard-range-form", root).hidden = filters.period !== "range";
     $("#dashboard-error", root).textContent = "";
     $("#dashboard-feedback", root).textContent = "Actualizando estadísticas…";
     root
@@ -56,7 +73,8 @@ export function dashboard() {
     try {
       const data = await loadDashboard(filters);
       if (!root.isConnected || revision !== request) return;
-      $("#dashboard-results", root).innerHTML = dashboardContent(data);
+      lastData = data;
+      $("#dashboard-results", root).innerHTML = dashboardContent(data, filters);
       $("#dashboard-feedback", root).textContent =
         `Estadísticas actualizadas: ${data.selected.count} ventas en la selección.`;
       if (focusKey)
@@ -75,7 +93,10 @@ export function dashboard() {
   root.onclick = (event) => {
     const button = event.target.closest("button");
     if (!button || !root.contains(button)) return;
-    if (button.dataset.dashboardPeriod) {
+    if (button.id === "jump-top-products") {
+      $("#top-products-title", root).focus({ preventScroll: true });
+      $("#dashboard-product-ranking", root).scrollIntoView({ block: "start" });
+    } else if (button.dataset.dashboardPeriod) {
       filters.period = button.dataset.dashboardPeriod;
       refresh();
     } else if (button.id === "refresh-dashboard") {
@@ -104,6 +125,7 @@ export function dashboard() {
     if (event.target.name === "dashboardDate") {
       if (!event.target.reportValidity()) return;
       filters.date = event.target.value;
+      filters.year = filters.date.slice(0, 4);
       refresh();
     } else if (event.target.name === "dashboardDay") {
       const day = Number(event.target.value);
@@ -111,9 +133,37 @@ export function dashboard() {
         ? [...new Set([...filters.days, day])].sort()
         : filters.days.filter((d) => d !== day);
       refresh(`[name="dashboardDay"][value="${day}"]`);
-    } else if (event.target.name === "dashboardSupplier") {
-      filters.supplierId = event.target.value;
-      refresh('[name="dashboardSupplier"]');
+    } else if (
+      ["weekMetric", "hourRange"].includes(event.target.name) &&
+      lastData
+    ) {
+      filters[event.target.name] = event.target.value;
+      $("#dashboard-results", root).innerHTML = dashboardContent(
+        lastData,
+        filters,
+      );
+      root
+        .querySelector(`[name="${event.target.name}"]`)
+        ?.focus({ preventScroll: true });
+    }
+  };
+  root.onsubmit = (event) => {
+    if (event.target.id === "dashboard-year-form") {
+      event.preventDefault();
+      filters.year = event.target.elements.dashboardYear.value;
+      refresh('[name="dashboardYear"]');
+    } else if (event.target.id === "dashboard-range-form") {
+      event.preventDefault();
+      const from = event.target.elements.salesFrom.value,
+        to = event.target.elements.salesTo.value;
+      if (from > to) {
+        $("#dashboard-error", root).textContent =
+          "La fecha desde no puede ser posterior a la fecha hasta.";
+        return;
+      }
+      filters.from = from;
+      filters.to = to;
+      refresh();
     }
   };
   refresh();
@@ -127,8 +177,16 @@ function periodButton(period, filters) {
   });
 }
 
-function dashboardContent(data) {
-  const totalMax = Math.max(1, ...data.week.days.map((day) => day.total));
+function dashboardContent(data, filters) {
+  const metric = filters.weekMetric;
+  const weeklyFormat =
+    metric === "total"
+      ? crc
+      : (n) =>
+          new Intl.NumberFormat("es-CR", { maximumFractionDigits: 0 }).format(
+            n,
+          );
+  const totalMax = Math.max(1, ...data.week.days.map((day) => day[metric]));
   const low = model.state.products.filter(
     (p) => p.active && p.stock <= p.minimum,
   ).length;
@@ -136,12 +194,12 @@ function dashboardContent(data) {
     (o) => o.status === "Pendiente",
   ).length;
   return view("dashboard-content", {
-    summaryCards: ["day", "week", "month"]
+    summaryCards: ["day", "week", "month", "year"]
       .map((period) => {
         const item = data.summaries[period];
         return view("dashboard-metric", {
           period,
-          label: `Ventas ${period === "day" ? "del día" : period === "week" ? "de la semana" : "del mes"}`,
+          label: `Ventas ${period === "day" ? "del día" : period === "week" ? "de la semana" : period === "month" ? "del mes" : "del año"}`,
           total: crc(item.total),
           count: item.count,
           range:
@@ -159,6 +217,71 @@ function dashboardContent(data) {
     dailyAverage: crc(data.selected.dailyAverage),
     eligibleDays: data.eligibleDays,
     weekRange: `${date(data.week.from)} – ${date(data.week.to)}`,
+    weekMetric: select(
+      "weekMetric",
+      "Mostrar ventas semanales en",
+      [
+        ["total", "Colones · IVA incluido"],
+        ["units", "Unidades vendidas"],
+        ["count", "Cantidad de facturas"],
+      ],
+      metric,
+    ),
+    yearField: field(
+      "dashboardYear",
+      "Año de los gráficos mensuales",
+      data.annual.year,
+      "number",
+      `required min="${model.state.started.slice(0, 4)}" max="${model.state.today.slice(0, 4)}" step="1"`,
+    ),
+    annualSales: lineChart(
+      data.annual.months.map((m) => ({
+        label: new Intl.DateTimeFormat("es-CR", {
+          month: "short",
+          timeZone: "UTC",
+        }).format(new Date(`${m.month}-01T12:00:00Z`)),
+        value: m.available ? m.total : null,
+      })),
+      `Ventas de ${data.annual.year} por mes`,
+    ),
+    annualProfit: Object.hasOwn(data.annual.months[0], "profit")
+      ? view("dashboard-profit", {
+          chart: lineChart(
+            data.annual.months.map((m) => ({
+              label: new Intl.DateTimeFormat("es-CR", {
+                month: "short",
+                timeZone: "UTC",
+              }).format(new Date(`${m.month}-01T12:00:00Z`)),
+              value: m.available ? m.profit : null,
+            })),
+            `Utilidad bruta estimada de ${data.annual.year}`,
+          ),
+        })
+      : "",
+    hourRange: select(
+      "hourRange",
+      "Horas que deseas visualizar",
+      [
+        ["24", "Todo el día · 00:00–23:59"],
+        ["day", "Diurno · 06:00–17:59"],
+        ["night", "Nocturno · 18:00–05:59"],
+      ],
+      filters.hourRange,
+    ),
+    hourlyChart: lineChart(
+      (filters.hourRange === "day"
+        ? data.hourly.hours.slice(6, 18)
+        : filters.hourRange === "night"
+          ? [...data.hourly.hours.slice(18), ...data.hourly.hours.slice(0, 6)]
+          : data.hourly.hours
+      ).map((h) => ({
+        label: `${String(h.hour).padStart(2, "0")}:00`,
+        value: h.count,
+      })),
+      "Cantidad de ventas por hora de Costa Rica en el período seleccionado",
+      false,
+    ),
+    unknownTime: data.hourly.unknownTime,
     dayControls:
       data.period === "week"
         ? view("dashboard-day-filters", {
@@ -180,8 +303,8 @@ function dashboardContent(data) {
     axis: [1, 0.75, 0.5, 0.25, 0]
       .map((fraction) =>
         view("dashboard-axis-tick", {
-          amount: crc(
-            totalMax === 1 && !data.week.days.some((d) => d.total)
+          amount: weeklyFormat(
+            totalMax === 1 && !data.week.days.some((d) => d[metric])
               ? 0
               : totalMax * fraction,
           ),
@@ -190,10 +313,10 @@ function dashboardContent(data) {
       .join(""),
     bars: data.week.days
       .map((day, index) => {
-        const height = (day.total / totalMax) * 150;
+        const height = (day[metric] / totalMax) * 150;
         return view("dashboard-bar", {
           weekday: day.weekday,
-          amount: crc(day.total),
+          amount: weeklyFormat(day[metric]),
           short: days[index],
           dayNumber: Number(day.date.slice(-2)),
           height: height.toFixed(3),
@@ -201,7 +324,7 @@ function dashboardContent(data) {
           pressed: String(day.selected && day.available),
           disabled: day.available ? "" : "disabled",
           label: esc(
-            `${fullDays[index]}, ${date(day.date)}: ${crc(day.total)}, ${day.count} ventas${day.available ? "" : ". Fuera del período disponible"}`,
+            `${fullDays[index]}, ${date(day.date)}: ${crc(day.total)}, ${day.count} ventas, ${day.units} unidades${day.available ? "" : ". Fuera del período disponible"}`,
           ),
         });
       })
@@ -222,47 +345,7 @@ function dashboardContent(data) {
         }),
       )
       .join(""),
-    productTable: productTable(data.topProducts),
-    productCount: data.productCount,
-    supplierSelect: select(
-      "dashboardSupplier",
-      "Proveedor del catálogo",
-      [
-        ["", "Todos · 5 proveedores con más unidades"],
-        ...data.supplierOptions.map((s) => [s.id, s.name]),
-      ],
-      data.supplierId,
-    ),
-    supplierRanking: data.supplierRanking.length
-      ? data.supplierRanking
-          .map((group) =>
-            view("dashboard-supplier", {
-              name: esc(group.supplier),
-              units: group.units,
-              detail: productTable(group.products),
-            }),
-          )
-          .join("")
-      : view("dashboard-no-supplier-sales"),
     low,
     pending,
   });
-}
-
-function productTable(products) {
-  return table(
-    ["Artículo", "Unidades", "Ventas"],
-    products.map((product, index) =>
-      tr([
-        view("dashboard-product", {
-          rank: index + 1,
-          name: esc(product.name),
-          code: esc(product.code),
-        }),
-        product.units,
-        crc(product.total),
-      ]),
-    ),
-    "No hay artículos vendidos en esta selección.",
-  );
 }

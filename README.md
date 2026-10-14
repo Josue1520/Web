@@ -39,20 +39,33 @@ Estas cuentas contienen datos ficticios para la presentación. En **Usuarios** p
 
 ## Dashboard de ventas
 
-Abre **Resumen** en la barra lateral. Está disponible para administrador y dependiente y utiliza las facturas guardadas, sin agregar ventas ficticias. Las capturas de ejemplo se generan con una base temporal de pruebas.
+Abre **Resumen** en la barra lateral. La distribución toma como referencia las capturas aportadas: cuatro indicadores, gráficos amplios por mes y hora, medios de pago, ventas semanales y Top 10. Conserva el azul y el fondo gris azulado de SIPRO. Usa facturas guardadas, sin añadir ventas ficticias; las capturas de ejemplo se generan con una base temporal de pruebas.
 
-1. Elige **Día**, **Semana** o **Mes**, y una **Fecha de referencia**. La semana va de lunes a domingo; el mes es calendario. Las tres tarjetas superiores siempre muestran los períodos completos correspondientes a esa fecha.
-2. En vista semanal, marca los días que quieras incluir, pulsa las barras del gráfico o usa **Toda la semana**, **Lunes a viernes** y **Fin de semana**. El resumen de la selección, los medios de pago y ambos rankings se recalculan juntos. Quitar todos los días muestra cero.
-3. El gráfico conserva el contexto de los siete días de esa semana; atenúa los que no están seleccionados y deshabilita fechas futuras o anteriores al inicio del sistema. En vista diaria o mensual, pulsar una barra abre la selección semanal de ese día.
-4. Consulta **Efectivo**, **Tarjeta** y **SINPE**: importe, número de facturas y porcentaje sobre las ventas seleccionadas. Efectivo cuenta el importe vendido, sin incluir el vuelto; no representa el saldo físico de caja.
-5. Revisa los **10 artículos más vendidos por unidades**. En **Más vendidos por proveedor**, se muestran los 5 proveedores con más unidades y sus 3 primeros artículos; al elegir uno, aparecen hasta 10 artículos.
-6. Pulsa **Actualizar** para consultar nuevas ventas o anulaciones de otras sesiones. Al regresar a Resumen se vuelve a consultar el servidor; al recargar la página se restablecen los filtros a la semana actual.
+### Indicadores y gráficos
 
-Los importes incluyen IVA y descuentos; se excluyen facturas anuladas. El ticket promedio divide las ventas seleccionadas entre sus facturas. El promedio diario incluye días sin ventas, pero solo días disponibles dentro de la selección: no divide entre fechas futuras. Las fechas comerciales usan Costa Rica.
+- **Día, semana, mes y año:** las cuatro tarjetas corresponden a la fecha de referencia. La semana empieza el lunes. Los totales incluyen IVA y descuentos, y excluyen anulaciones.
+- **Ventas del año por meses:** selecciona el año y pulsa **Buscar año**. Los meses anteriores al inicio del sistema o futuros aparecen como no disponibles. **Ver datos del gráfico** abre los valores en una tabla.
+- **Utilidad bruta estimada:** solo la ve el administrador. Usa ingresos sin IVA menos el costo histórico de los productos vendidos; no descuenta gastos operativos. Si falta información de costos, ese mes no se representa como cero.
+- **Detalle de ventas y pagos:** elige **Día**, **Semana**, **Mes** o **Rango**. En Rango, completa **Desde · Ventas y pagos**, **Hasta · Ventas y pagos** y pulsa **Consultar ventas y pagos**. Las fechas son inclusivas. Este filtro actualiza el resumen, los pagos y las ventas por hora.
+- **Medios de pago:** efectivo, tarjeta y SINPE muestran importe, cantidad de facturas y participación. Efectivo corresponde al importe vendido, sin vuelto; no es el saldo físico de caja.
+- **Ventas semanales:** consulta la semana de la fecha de referencia en colones, unidades o cantidad de facturas. En vista Semana puedes marcar días, pulsar barras o elegir los accesos de semana completa, lunes a viernes y fin de semana. El gráfico siempre muestra esa semana como contexto.
+- **Ventas por hora:** suma las facturas del detalle seleccionado por hora de Costa Rica. Permite ver las 24 horas, la franja diurna 06:00–17:59 o la nocturna 18:00–05:59. Las facturas antiguas sin hora se informan aparte; no se les inventa una hora.
 
-El ranking por proveedor usa la **asociación actual del producto en el catálogo**, según la opción elegida para este proyecto. Si un producto tiene dos proveedores, aparece en ambos grupos; **no sumes esos grupos como ventas adicionales**. No identifica el proveedor del lote vendido. Modificar la asociación cambia esta agrupación histórica, pero no el total general de las ventas. Los artículos vendidos que ahora están inactivos siguen apareciendo en las estadísticas.
+El ticket promedio divide las ventas seleccionadas entre sus facturas. El promedio diario incluye días disponibles sin ventas, sin contar fechas futuras. **Actualizar** vuelve a consultar las estadísticas generales. Los filtros se conservan al cambiar de módulo durante la sesión; recargar la página restablece los valores iniciales.
 
-[Ver dashboard con datos de prueba](docs/capturas/dashboard-ventas.png) · [Ver versión móvil](docs/capturas/dashboard-ventas-movil.png)
+### Top 10 general o por proveedor, con fechas propias
+
+1. Pulsa **Ver Top 10** o baja hasta **Top 10 productos más vendidos**. Por defecto consulta el mes actual hasta hoy, limitado al inicio del sistema.
+2. Elige **Desde · Top 10** y **Hasta · Top 10**; puedes cruzar meses o años. Los accesos **Este mes**, **Mes anterior** y **Últimos 30 días** preparan y consultan esos rangos.
+3. En **Vista del Top 10**, deja **General · Todos los productos** o elige un proveedor del catálogo.
+4. Pulsa **Consultar Top 10**. Cambiar un campo no aplica los filtros hasta consultar; el rango mostrado sobre los resultados identifica la consulta vigente.
+5. Revisa el artículo líder, unidades totales, importe y cantidad de artículos distintos del filtro. La tabla muestra hasta diez productos, sus unidades con barras comparativas, ventas y porcentaje. Los empates se resuelven por importe vendido y luego identificador.
+
+Los porcentajes se calculan sobre **todas** las unidades del rango/proveedor, no solamente las del Top 10. Se informa cuántas unidades quedan fuera de los diez primeros. Sin ventas se muestra un estado vacío. Estos filtros son **independientes** de los de pagos y del gráfico semanal.
+
+El proveedor se obtiene de la **asociación actual del producto en el catálogo**. Un producto compartido aparece al consultar cualquiera de sus proveedores, pero se cuenta una sola vez en General. Cambiar asociaciones modifica esta clasificación histórica; no identifica el proveedor del lote vendido. Se incluyen artículos vendidos que ahora estén inactivos.
+
+[Ver dashboard](docs/capturas/dashboard-ventas.png) · [Top 10 general](docs/capturas/top10-general.png) · [Top 10 por proveedor](docs/capturas/top10-proveedor.png) · [Versión móvil](docs/capturas/dashboard-ventas-movil.png)
 
 ## Pedidos recomendados por proveedor
 
