@@ -271,6 +271,7 @@ export function saveOrder(s, user, id, b) {
     status: "Pendiente",
     notes: text(b.notes ?? "", "Observaciones", false),
     user: old?.user ?? user.username,
+    ...(old?.origin === "recommended" ? { origin: old.origin } : {}),
   };
   if (old) s.orders[s.orders.indexOf(old)] = row;
   else s.orders.push(row);

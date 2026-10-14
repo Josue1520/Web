@@ -72,7 +72,7 @@ export const table = (
   empty = "No hay registros para mostrar.",
 ) => {
   const numeric = heads.map((h) =>
-    /^(Cantidad|Costo.*|Precio.*|Total|IVA.*|Importe|Exonerado|Neto|Impuestos.*|Otros impuestos|Otros cargos|Descuento|Existencias?|Antes|Ingresadas|Después|Saldo|Stock.*|Mínimo|Subtotal|Entradas|Salidas|Utilidad.*)$/.test(
+    /^(Cantidad.*|Por recibir|Costo.*|Precio.*|Total|IVA.*|Importe|Exonerado|Neto|Impuestos.*|Otros impuestos|Otros cargos|Descuento|Existencias?|Antes|Ingresadas|Después|Saldo|Stock.*|Mínimo|Subtotal|Entradas|Salidas|Utilidad.*)$/.test(
       h,
     ),
   );

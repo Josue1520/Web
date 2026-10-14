@@ -13,6 +13,7 @@ import {
 } from "./catalog.js";
 import { adjustStock, inventoryPage } from "./inventory.js";
 import { editOrder, ordersPage, viewOrder } from "./orders.js";
+import { recommendedOrders } from "./order-recommendations.js";
 import {
   confirmPurchasePayment,
   importPurchaseXml,
@@ -113,6 +114,7 @@ export async function dispatch(action, id, element) {
     return login();
   }
   const handlers = {
+    "recommended-orders": recommendedOrders,
     "edit-supplier": editSupplier,
     "view-supplier": viewSupplier,
     "edit-product": editProduct,

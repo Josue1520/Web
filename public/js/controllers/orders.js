@@ -18,13 +18,22 @@ import { api, isAdmin, matches, model } from "../models/app-model.js";
 import { attachFilter } from "./forms.js";
 import { openDialog, toast } from "../views/feedback.js";
 import { reload } from "./application.js";
+import { recommendedOrders } from "./order-recommendations.js";
 
 export function ordersPage() {
   $("#content").innerHTML = view("orders-page-1", {
     head: head(
       "Pedidos a proveedores",
       "Prepara tus compras y registra su recepción.",
-      button("＋ Nuevo pedido", "edit-order", "", "primary"),
+      view("orders-actions", {
+        recommended: button(
+          "Pedidos recomendados",
+          "recommended-orders",
+          "",
+          "primary",
+        ),
+        manual: button("＋ Nuevo pedido", "edit-order"),
+      }),
     ),
     filters: filters(
       select("status", "Estado", [["", "Todos"], "Pendiente", "Recibido"]) +
@@ -64,7 +73,10 @@ export function ordersPage() {
         .reverse()
         .map((o) =>
           tr([
-            idLabel("PED", o.id),
+            view("order-reference", {
+              reference: idLabel("PED", o.id),
+              origin: o.origin === "recommended" ? "Recomendado" : "Manual",
+            }),
             esc(o.supplier),
             date(o.date),
             crc(o.total),
@@ -83,15 +95,23 @@ export function ordersPage() {
   });
 }
 
-export function editOrder(id) {
+export function editOrder(id, recommendation = null) {
   const order = model.state.orders.find((o) => o.id === Number(id));
   let supplierId =
-    order?.supplierId ?? model.state.suppliers.find((s) => s.active)?.id;
+    order?.supplierId ??
+    recommendation?.supplierId ??
+    model.state.suppliers.find((s) => s.active)?.id;
   let items = order
     ? order.items.map((l) => ({ productId: l.productId, qty: l.qty }))
-    : [];
+    : (recommendation?.items ?? [])
+        .slice(0, 100)
+        .map((l) => ({ productId: l.productId, qty: l.qty }));
   openDialog(
-    order ? `Editar ${idLabel("PED", order.id)}` : "Nuevo pedido a proveedor",
+    order
+      ? `Editar ${idLabel("PED", order.id)}`
+      : recommendation
+        ? "Preparar pedido recomendado"
+        : "Nuevo pedido a proveedor",
     view("edit-order-1", {
       select: select(
         "supplierId",
@@ -100,9 +120,19 @@ export function editOrder(id) {
           .filter((s) => s.active)
           .map((s) => [s.id, s.name]),
         supplierId,
-        "required",
+        recommendation ? "required disabled" : "required",
       ),
-      field: field("notes", "Observaciones", order?.notes),
+      recommendationNotice: recommendation
+        ? view("recommended-draft-notice")
+        : "",
+      field: field(
+        "notes",
+        "Observaciones",
+        order?.notes ??
+          (recommendation
+            ? "Pedido recomendado para completar mínimos, descontando cantidades pendientes de recibir."
+            : ""),
+      ),
       button: button("Cancelar", "close"),
     }),
   );
@@ -146,6 +176,13 @@ export function editOrder(id) {
           ]);
         }),
       ) + view("edit-order-5", { crc: crc(total) });
+    total = Math.round((total + Number.EPSILON) * 100) / 100;
+    $("#order-minimum-message").textContent =
+      s && total < s.minimum
+        ? `Faltan ${crc(s.minimum - total)} para el pedido mínimo de este proveedor. Ajusta las cantidades o agrega productos antes de guardarlo.`
+        : "";
+    $("#order-minimum-warning").hidden = !$("#order-minimum-message")
+      .textContent;
     $("#add-order-line").onclick = () => {
       const productId = Number($('[name="productId"]', form).value),
         qty = Number($('[name="qty"]', form).value);
@@ -185,7 +222,12 @@ export function editOrder(id) {
     if (!items.length)
       return ($(".error", form).textContent =
         "Agrega al menos un producto al pedido.");
-    const b = { supplierId, items, notes: $('[name="notes"]', form).value };
+    const b = {
+      supplierId,
+      items,
+      notes: $('[name="notes"]', form).value,
+      ...(recommendation ? { recommendationToken: recommendation.token } : {}),
+    };
     const review = $("#order-lines")
       .innerHTML.replace(/<input[^>]*value="(\d+)"[^>]*>/g, "$1")
       .replace(/<button[\s\S]*?<\/button>/g, "");
@@ -197,18 +239,32 @@ export function editOrder(id) {
         ),
         review: review,
         esc3: esc(b.notes),
+        recommendationAction: recommendation
+          ? view("recommendation-recalculate-action")
+          : "",
       }),
     );
     // Conservar el formulario y sus eventos permite volver sin perder el borrador.
     $("#back-order").onclick = () => {
-      openDialog(order ? "Editar pedido" : "Nuevo pedido", "");
+      openDialog(
+        order
+          ? "Editar pedido"
+          : recommendation
+            ? "Preparar pedido recomendado"
+            : "Nuevo pedido",
+        "",
+      );
       $(".dialog-body").append(form);
     };
+    if (recommendation)
+      $("#refresh-order-recommendation").onclick = recommendedOrders;
     $("#confirm-order").onclick = async (e) => {
       e.target.disabled = true;
       try {
         await api(
-          `orders${order ? `/${order.id}` : ""}`,
+          recommendation
+            ? "orders/recommendations"
+            : `orders${order ? `/${order.id}` : ""}`,
           order ? "PUT" : "POST",
           b,
         );

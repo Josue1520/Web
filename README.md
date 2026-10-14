@@ -30,11 +30,29 @@ Estas cuentas contienen datos ficticios para la presentación. En **Usuarios** p
 - **Proveedores:** alta, edición, activación/desactivación, identificación única, contacto, catálogo y condiciones comerciales.
 - **Productos:** catálogo, búsqueda por nombre/código, filtros de categoría/estado, IVA configurable, precio, presentación y asociación con varios proveedores y sus precios de compra.
 - **Inventario:** existencias iniciales, ajustes con motivo, mínimos y alertas, registro de entradas/salidas y consulta de proveedores asociados.
-- **Pedidos:** selección de proveedor/productos, cantidades, revisión antes de guardar, modificación de pedidos pendientes, búsqueda y recepción completa. Recibir un pedido suma sus existencias una sola vez.
+- **Pedidos:** creación manual o recomendación por proveedor según faltantes, cantidades editables, revisión antes de guardar, modificación de pedidos pendientes, búsqueda y recepción completa. Recibir un pedido suma sus existencias una sola vez.
 - **Facturación:** cliente, productos, descuento porcentual, IVA por producto, efectivo/tarjeta/SINPE, vuelto, consecutivo, historial y filtros. Anular requiere administrador y motivo; restaura las existencias una sola vez. Las facturas conservan los precios originales.
 - **Reportes:** pedidos, compras recibidas, productos solicitados, ventas, inventario actual y utilidad bruta estimada. Consulta por fechas, proveedor y estado cuando aplica; impresión/PDF y exportación a Excel para administradores.
 
 **PDF:** las ventas se imprimen como ticket de 80/58 mm; los reportes se imprimen en A4. El botón abre el diálogo del navegador; selecciona **Guardar como PDF**. Permite reimprimir comprobantes históricos. **Excel:** se descarga un archivo `.xls` con contenido SpreadsheetML (XML de Excel); no es un CSV renombrado. Excel puede mostrar un aviso de compatibilidad por ser un formato XML antiguo; también se puede abrir en LibreOffice Calc.
+
+## Pedidos recomendados por proveedor
+
+1. En **Productos**, configura el **stock mínimo** y los proveedores asociados con su costo de compra.
+2. En **Pedidos**, pulsa **Pedidos recomendados**. Puedes filtrar la propuesta por proveedor.
+3. Revisa existencia, mínimo, cantidades pendientes de recibir, cantidad sugerida y costo estimado.
+4. Pulsa **Preparar pedido**, ajusta cantidades o artículos y usa **Revisar pedido → Confirmar pedido**. El pedido se conserva como **Pendiente**; consultar o preparar la propuesta no guarda registros.
+5. Al llegar la mercadería, un administrador confirma la recepción para actualizar el inventario.
+
+La cantidad sugerida es `máximo(0, mínimo − existencia − pendiente de recibir)`. Por ejemplo: mínimo 10, existencia 3 y 2 unidades pendientes → sugiere comprar **5**. Se consideran pedidos pendientes de cualquier proveedor; los recibidos ya están reflejados en existencias.
+
+Un producto con varios proveedores activos se asigna una sola vez, al de menor costo registrado. Los empates se resuelven por menor plazo de entrega y luego por identificador. Es una regla de reposición por mínimos, no un pronóstico de ventas ni una optimización de transporte o descuentos por volumen. Puedes modificar el borrador antes de confirmar.
+
+Si el importe no alcanza el **pedido mínimo del proveedor**, se muestra cuánto falta y debes ajustar el borrador; no se compran unidades adicionales automáticamente. Los faltantes sin proveedor activo, los productos agotados con mínimo cero y los faltantes ya cubiertos por pedidos pendientes se muestran aparte. Los productos inactivos no se recomiendan. Si hay más de 100 artículos por proveedor, se preparan lotes de hasta 100; actualiza después de guardar para preparar el resto.
+
+La confirmación comprueba otra vez la propuesta dentro de la transacción. Si cambiaron los faltantes, precios o pedidos, solicita recalcular para evitar guardar una recomendación desactualizada. Guardar un pedido no mueve inventario ni lo envía automáticamente al proveedor. Administradores y dependientes pueden prepararlo; solo el administrador recibe la mercadería.
+
+[Ver ejemplo de pedidos recomendados](docs/capturas/pedidos-recomendados.png)
 
 ## Caja, ventas guardadas y tickets
 

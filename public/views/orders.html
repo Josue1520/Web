@@ -9,12 +9,23 @@
   <div class="actions">{{{button}}}{{{slot2}}}</div>
 </template>
 
+<template id="orders-actions">
+  <div class="page-actions">{{{recommended}}}{{{manual}}}</div>
+</template>
+
+<template id="order-reference">
+  {{{reference}}}<small>{{{origin}}}</small>
+</template>
+
 <template id="edit-order-1">
   <form id="order-form" class="stack-gap">
-    {{{select}}}
+    {{{recommendationNotice}}} {{{select}}}
     <div id="order-terms" class="notice info"></div>
     <div id="order-picker" class="line-add"></div>
     <div id="order-lines"></div>
+    <div id="order-minimum-warning" hidden>
+      <p id="order-minimum-message" class="notice" role="status"></p>
+    </div>
     {{{field}}}
     <p class="error" role="alert"></p>
     <div class="dialog-footer">
@@ -64,11 +75,133 @@
   <p>Proveedor: <b>{{{esc}}}</b></p>
   {{{review}}}
   <p>{{{esc3}}}</p>
+  <p class="form-help">
+    Guardar registra un pedido pendiente. Las existencias cambian al confirmar
+    su recepción.
+  </p>
   <p class="error" role="alert"></p>
   <div class="dialog-footer">
     <button class="btn" id="back-order">Volver a editar</button
-    ><button class="btn primary" id="confirm-order">Confirmar pedido</button>
+    >{{{recommendationAction}}}<button class="btn primary" id="confirm-order">
+      Confirmar pedido
+    </button>
   </div>
+</template>
+
+<template id="recommendations-loading">
+  <div id="recommendations-content" aria-live="polite">
+    <p>Calculando faltantes y cantidades pendientes de recibir…</p>
+  </div>
+</template>
+
+<template id="recommendations-overview">
+  <p>
+    Se recomienda completar el mínimo de cada producto:
+    <b>mínimo − existencia − cantidad pendiente de recibir</b>. Solo se incluyen
+    cantidades mayores que cero.
+  </p>
+  <p class="form-help">
+    Cada producto se asigna al proveedor activo con menor costo registrado. En
+    caso de empate, se usa el menor plazo de entrega. Los montos son estimados
+    con los costos del catálogo; no incluyen cargos adicionales del proveedor.
+  </p>
+  <div class="form-grid">
+    {{{supplierFilter}}}
+    <div class="actions">
+      <button type="button" class="btn" id="recalculate-recommendations">
+        Actualizar faltantes
+      </button>
+    </div>
+  </div>
+  <div id="recommendation-groups"></div>
+  {{{exceptions}}}
+  <p class="form-help">
+    Preparar abre un borrador editable; no guarda ni envía el pedido al
+    proveedor. Confírmalo después de revisar cantidades y condiciones.
+  </p>
+</template>
+
+<template id="recommendation-supplier">
+  <section
+    class="card recommendation-supplier"
+    aria-label="Recomendación para {{{supplier}}}"
+  >
+    <div class="card-header">
+      <h3>{{{supplier}}}</h3>
+      <span>{{{productCount}}}</span>
+    </div>
+    {{{lines}}}
+    <div class="card-body">
+      <div class="total-line">
+        <span>Total sugerido</span><b>{{{total}}}</b>
+      </div>
+      <p class="form-help">Pedido mínimo del proveedor: {{{minimum}}}</p>
+      {{{minimumNotice}}}{{{batchNotice}}}
+      <button
+        type="button"
+        class="btn primary"
+        data-recommended-supplier="{{{supplierId}}}"
+      >
+        Preparar pedido
+      </button>
+    </div>
+  </section>
+</template>
+
+<template id="recommendation-product">
+  <strong>{{{name}}}</strong><small>{{{code}}} · {{{presentation}}}</small>
+</template>
+
+<template id="recommendation-minimum">
+  <p class="notice">
+    Faltan {{{gap}}} para alcanzar el monto mínimo del proveedor. Puedes
+    preparar el borrador y ajustar su contenido; no se aumentan cantidades
+    automáticamente para alcanzar ese monto.
+  </p>
+</template>
+
+<template id="recommendation-batch">
+  <p class="notice">
+    Hay más de 100 productos. Se prepararán los primeros 100; después de
+    guardarlos, actualiza los faltantes para preparar los siguientes.
+  </p>
+</template>
+
+<template id="recommendations-empty">
+  <p class="notice info">
+    No hay compras recomendadas para los mínimos configurados y proveedores
+    disponibles. Revisa abajo los productos sin proveedor, sin mínimo o
+    cubiertos por pedidos pendientes, si los hay.
+  </p>
+</template>
+
+<template id="recommendation-exceptions">
+  <section class="card">
+    <div class="card-header"><h3>{{{title}}}</h3></div>
+    <div class="card-body"><p class="form-help">{{{explanation}}}</p></div>
+    {{{lines}}}
+  </section>
+</template>
+
+<template id="recommendations-error">
+  <p class="error" role="alert">{{{message}}}</p>
+  <button type="button" class="btn" id="recalculate-recommendations">
+    Volver a intentar
+  </button>
+</template>
+
+<template id="recommended-draft-notice">
+  <p class="notice info">
+    Borrador recomendado para completar mínimos, descontando pedidos pendientes.
+    Puedes modificar cantidades, quitar artículos o agregar otros de este
+    proveedor. Las existencias no cambian al guardar el pedido.
+  </p>
+</template>
+
+<template id="recommendation-recalculate-action">
+  <button type="button" class="btn" id="refresh-order-recommendation">
+    Recalcular recomendación
+  </button>
 </template>
 
 <template id="view-order-2">

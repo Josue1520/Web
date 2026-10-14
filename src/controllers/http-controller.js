@@ -1,4 +1,8 @@
 import { spreadsheet } from "../views/spreadsheet.js";
+import {
+  recommendOrders,
+  saveRecommendedOrder,
+} from "../models/order-recommendations.js";
 import { createServer } from "node:http";
 import { readFile, readdir } from "node:fs/promises";
 import { resolve, extname } from "node:path";
@@ -38,7 +42,10 @@ async function publicAssets(directory, prefix = "") {
         assets,
         await publicAssets(resolve(directory, entry.name), `${file}/`),
       );
-    else if (entry.isFile() && /\.(?:html|css|js|svg|ttf|woff2|txt)$/.test(file))
+    else if (
+      entry.isFile() &&
+      /\.(?:html|css|js|svg|ttf|woff2|txt)$/.test(file)
+    )
       assets[`/${file}`] = file;
   }
   return assets;
@@ -192,6 +199,8 @@ export function createApp({
         }
         if (path === "/api/state" && method === "GET")
           return send(200, snapshot(store.read(), user));
+        if (path === "/api/orders/recommendations" && method === "GET")
+          return send(200, recommendOrders(store.read()));
         if (path === "/api/reports" && method === "GET") {
           const result = report(store.read(), user, url.searchParams);
           if (url.searchParams.get("format") === "xls") {
@@ -227,6 +236,8 @@ export function createApp({
         }
         let match;
         const result = store.change((s) => {
+          if (path === "/api/orders/recommendations" && method === "POST")
+            return saveRecommendedOrder(s, user, body);
           if (
             (match = path.match(
               /^\/api\/(suppliers|products|users)(?:\/(\d+))?$/,

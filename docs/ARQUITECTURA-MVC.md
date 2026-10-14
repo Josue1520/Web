@@ -10,6 +10,7 @@ La aplicación conserva Node.js, SQLite y JavaScript nativo. La separación MVC 
 | Controlador | `src/controllers/http-controller.js` | Recibir HTTP, validar sesión/origen, dirigir cada operación al modelo y devolver respuestas. Sirve únicamente archivos del directorio público. |
 | Modelo | `src/models/domain.js` | Permisos, validaciones de negocio, pedidos, ventas, compras, inventario y reportes. |
 | Modelo | `src/models/store.js` | Persistencia y transacciones SQLite, contraseñas y datos iniciales. |
+| Modelo | `src/models/order-recommendations.js` | Calcular faltantes, descontar pendientes, asignar proveedor y comprobar propuestas antes de confirmar. |
 | Modelo | `src/models/purchase-xml.js` | Leer y validar el documento, asociar productos y registrar la compra. |
 | Vista | `src/views/spreadsheet.js` | Convertir el resultado del reporte en SpreadsheetML para Excel. |
 
@@ -65,3 +66,12 @@ La base sigue en `data/sipro.sqlite` y conserva su esquema. Esta reorganización
 ## Verificación
 
 `npm test` ejecuta pruebas del negocio, XML, persistencia, plantillas y recursos públicos. `npm run test:browser` recorre formularios reales en Chromium, incluyendo compras manuales/XML, inventario, pagos, roles, móvil, Excel y tickets de 80/58 mm. Las pruebas crean bases temporales. Las fuentes y las plantillas se sirven desde el mismo origen y se mantiene la política CSP sin `unsafe-inline` ni `unsafe-eval`.
+
+
+## Reposición por mínimos
+
+`GET /api/orders/recommendations` devuelve grupos por proveedor y excepciones sin escribir en la base. El cálculo vive en `src/models/order-recommendations.js`; la consulta y el borrador se coordinan desde `public/js/controllers/order-recommendations.js` y `orders.js`, con plantillas de `public/views/orders.html`.
+
+`POST /api/orders/recommendations` recibe el proveedor, las líneas editadas y el token de la propuesta. Recalcula y compara dentro de `store.change()` antes de usar las validaciones normales de `saveOrder()`. El token incluye los datos del grupo y el último pedido de ese proveedor: una segunda confirmación del mismo borrador no crea otra compra, incluso si se sustituyeron los artículos originalmente sugeridos. Un conflicto devuelve 409 y permite recalcular. Los pedidos guardados conservan `origin: "recommended"`, también al editarlos.
+
+No hay migración de esquema ni cambio de formato de los pedidos anteriores. El controlador HTTP exige la misma sesión y protección de origen que para los pedidos manuales. La recomendación no es un permiso para omitir mínimos comerciales, artículos activos ni asociaciones válidas.

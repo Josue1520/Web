@@ -85,3 +85,13 @@ Las pruebas comprueban cálculo de importes, entradas directas, ausencia de movi
 - La factura de pedido recibido muestra que el inventario ingresó al recibirlo; no registra otra entrada. Las pruebas verifican compra manual, XML, pedido recibido, duplicados, persistencia y existencias visibles al recargar Inventario.
 
 - Arquitectura MVC documentada: modelos y controladores separados en servidor y navegador, plantillas HTML externas y estilos CSS independientes; se conserva SQLite y el flujo de inventario.
+
+
+## Ampliación solicitada: pedidos recomendados
+
+- Reposición hasta el mínimo configurado, descontando cantidades de pedidos pendientes de todos los proveedores.
+- Asignación única al proveedor activo con menor costo registrado; empate por entrega y luego ID.
+- Consulta por proveedor, desglose por artículo y borrador editable con revisión y confirmación.
+- Avisos de mínimos comerciales, productos sin proveedor activo, agotados sin mínimo y faltantes cubiertos por pendientes.
+- La consulta no escribe; guardar conserva el pedido pendiente y su origen, sin cambiar existencias. La recepción conserva las reglas existentes.
+- Comprobación transaccional de propuestas desactualizadas y confirmaciones concurrentes; lotes de hasta 100 líneas.
