@@ -1,6 +1,6 @@
 # SIPRO — Sistema de Gestión de Pedidos a Proveedores
 
-Demostración funcional para un Mini Súper / Licorera, basada en **Proyecto de Sistemas.pdf** y en las pantallas del ZIP original. Incluye siete módulos conectados, datos persistentes y dos roles. Conserva el nombre, los productos iniciales y el cálculo de precios con IVA incluido. La interfaz usa un tema oscuro Glassmorphism con barra lateral; el código sigue una organización MVC con plantillas HTML, estilos CSS y módulos JavaScript separados.
+Demostración funcional para un Mini Súper / Licorera, basada en **Proyecto de Sistemas.pdf** y en las pantallas del ZIP original. Incluye siete módulos conectados, datos persistentes y dos roles. Conserva el nombre, los productos iniciales y el cálculo de precios con IVA incluido. La interfaz combina un dashboard comercial claro con las pantallas operativas en tema oscuro Glassmorphism, conservando la barra lateral; el código sigue una organización MVC con plantillas HTML, estilos CSS y módulos JavaScript separados.
 
 ## Ejecutar
 
@@ -26,6 +26,7 @@ Estas cuentas contienen datos ficticios para la presentación. En **Usuarios** p
 
 ## Funcionalidades
 
+- **Resumen:** dashboard de ventas diarias, semanales y mensuales, selección de días, gráfico semanal, importes por medio de pago y artículos más vendidos, también agrupados por proveedor asociado al producto.
 - **Seguridad:** inicio y cierre de sesión, usuarios, edición de credenciales, estado y roles. Los permisos se verifican en el servidor, las contraseñas se guardan con scrypt y las sesiones usan cookies HttpOnly. Cerrar sesión, cambiar la contraseña o desactivar al usuario invalida el acceso correspondiente.
 - **Proveedores:** alta, edición, activación/desactivación, identificación única, contacto, catálogo y condiciones comerciales.
 - **Productos:** catálogo, búsqueda por nombre/código, filtros de categoría/estado, IVA configurable, precio, presentación y asociación con varios proveedores y sus precios de compra.
@@ -35,6 +36,23 @@ Estas cuentas contienen datos ficticios para la presentación. En **Usuarios** p
 - **Reportes:** pedidos, compras recibidas, productos solicitados, ventas, inventario actual y utilidad bruta estimada. Consulta por fechas, proveedor y estado cuando aplica; impresión/PDF y exportación a Excel para administradores.
 
 **PDF:** las ventas se imprimen como ticket de 80/58 mm; los reportes se imprimen en A4. El botón abre el diálogo del navegador; selecciona **Guardar como PDF**. Permite reimprimir comprobantes históricos. **Excel:** se descarga un archivo `.xls` con contenido SpreadsheetML (XML de Excel); no es un CSV renombrado. Excel puede mostrar un aviso de compatibilidad por ser un formato XML antiguo; también se puede abrir en LibreOffice Calc.
+
+## Dashboard de ventas
+
+Abre **Resumen** en la barra lateral. Está disponible para administrador y dependiente y utiliza las facturas guardadas, sin agregar ventas ficticias. Las capturas de ejemplo se generan con una base temporal de pruebas.
+
+1. Elige **Día**, **Semana** o **Mes**, y una **Fecha de referencia**. La semana va de lunes a domingo; el mes es calendario. Las tres tarjetas superiores siempre muestran los períodos completos correspondientes a esa fecha.
+2. En vista semanal, marca los días que quieras incluir, pulsa las barras del gráfico o usa **Toda la semana**, **Lunes a viernes** y **Fin de semana**. El resumen de la selección, los medios de pago y ambos rankings se recalculan juntos. Quitar todos los días muestra cero.
+3. El gráfico conserva el contexto de los siete días de esa semana; atenúa los que no están seleccionados y deshabilita fechas futuras o anteriores al inicio del sistema. En vista diaria o mensual, pulsar una barra abre la selección semanal de ese día.
+4. Consulta **Efectivo**, **Tarjeta** y **SINPE**: importe, número de facturas y porcentaje sobre las ventas seleccionadas. Efectivo cuenta el importe vendido, sin incluir el vuelto; no representa el saldo físico de caja.
+5. Revisa los **10 artículos más vendidos por unidades**. En **Más vendidos por proveedor**, se muestran los 5 proveedores con más unidades y sus 3 primeros artículos; al elegir uno, aparecen hasta 10 artículos.
+6. Pulsa **Actualizar** para consultar nuevas ventas o anulaciones de otras sesiones. Al regresar a Resumen se vuelve a consultar el servidor; al recargar la página se restablecen los filtros a la semana actual.
+
+Los importes incluyen IVA y descuentos; se excluyen facturas anuladas. El ticket promedio divide las ventas seleccionadas entre sus facturas. El promedio diario incluye días sin ventas, pero solo días disponibles dentro de la selección: no divide entre fechas futuras. Las fechas comerciales usan Costa Rica.
+
+El ranking por proveedor usa la **asociación actual del producto en el catálogo**, según la opción elegida para este proyecto. Si un producto tiene dos proveedores, aparece en ambos grupos; **no sumes esos grupos como ventas adicionales**. No identifica el proveedor del lote vendido. Modificar la asociación cambia esta agrupación histórica, pero no el total general de las ventas. Los artículos vendidos que ahora están inactivos siguen apareciendo en las estadísticas.
+
+[Ver dashboard con datos de prueba](docs/capturas/dashboard-ventas.png) · [Ver versión móvil](docs/capturas/dashboard-ventas-movil.png)
 
 ## Pedidos recomendados por proveedor
 
@@ -166,7 +184,7 @@ Si ya tienes Chromium en Linux:
 SIPRO_CHROMIUM=/usr/bin/chromium npm run test:browser
 ```
 
-Los recorridos de navegador incluyen importación XML, alta de proveedor/producto, descarga del original, persistencia y revisión móvil. Usan registros temporales y generan capturas, un PDF y un Excel en `test-results/`, sin modificar los datos de la aplicación. En Linux, Playwright puede requerir bibliotecas del sistema; consulta su instalación oficial si no están presentes.
+Los recorridos de navegador incluyen importación XML, alta de proveedor/producto, descarga del original, pedidos recomendados, dashboard con filtros y pagos, persistencia y revisión móvil. Usan registros temporales y generan capturas, un PDF y un Excel en `test-results/`, sin modificar los datos de la aplicación. En Linux, Playwright puede requerir bibliotecas del sistema; consulta su instalación oficial si no están presentes.
 
 ## Estructura
 

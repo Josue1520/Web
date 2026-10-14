@@ -4,6 +4,7 @@ import { api, model } from "../models/app-model.js";
 import { render } from "./application.js";
 
 export function login() {
+  delete document.body.dataset.page;
   $("#modal").close();
   $("#app").innerHTML = view("login-1", {
     brand: brand,

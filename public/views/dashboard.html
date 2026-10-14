@@ -1,95 +1,269 @@
-<!-- Vistas de dashboard. Los marcadores reciben valores escapados o fragmentos de vista. -->
-
-<template id="dashboard-2">
-  <a href="#invoices" class="btn primary">＋ Nueva factura</a>
+<!-- Panel comercial: datos reales, filtros de calendario y composición de vistas. -->
+<template id="dashboard-shell">
+  <section class="sales-dashboard" id="sales-dashboard" aria-busy="true">
+    <header class="sales-dashboard-heading">
+      <div>
+        <p class="dashboard-eyebrow">CONTROL COMERCIAL</p>
+        <h1>Resumen del negocio</h1>
+        <p>Ventas, cobros y productos en un solo lugar.</p>
+      </div>
+      <a href="#invoices" class="btn primary">＋ Nueva factura</a>
+    </header>
+    <div class="dashboard-toolbar">
+      <div
+        class="dashboard-periods"
+        role="group"
+        aria-label="Período de ventas"
+      >
+        {{{dayButton}}}{{{weekButton}}}{{{monthButton}}}
+      </div>
+      {{{dateField}}}
+      <button type="button" class="btn" id="refresh-dashboard">
+        Actualizar
+      </button>
+    </div>
+    <p id="dashboard-feedback" class="dashboard-feedback" role="status">
+      Cargando estadísticas…
+    </p>
+    <p class="error" id="dashboard-error" role="alert"></p>
+    <div id="dashboard-results"></div>
+  </section>
 </template>
 
-<template id="dashboard-3">
-  <article class="stat {{{slot1}}}">
-    <div class="stat-top">{{{label}}}{{{icon}}}</div>
-    <strong>{{{value}}}</strong><small>{{{note}}}</small>
+<template id="dashboard-period">
+  <button
+    type="button"
+    data-dashboard-period="{{{period}}}"
+    aria-pressed="{{{pressed}}}"
+  >
+    {{{label}}}
+  </button>
+</template>
+
+<template id="dashboard-metric">
+  <article class="dashboard-metric" data-sales-metric="{{{period}}}">
+    <p>{{{label}}}</p>
+    <strong>{{{total}}}</strong><span>{{{count}}} facturas</span
+    ><small>{{{range}}}</small>
   </article>
 </template>
 
-<template id="dashboard-4">
-  <div class="notice">
-    {{{icon}}}
+<template id="dashboard-content">
+  <div class="dashboard-metrics">{{{summaryCards}}}</div>
+  <p class="dashboard-scope-note">
+    Los indicadores superiores muestran el día, la semana y el mes de la fecha
+    elegida. El detalle inferior aplica los días seleccionados. Semana de lunes
+    a domingo.
+  </p>
+  <section class="dashboard-selection" aria-label="Resumen de la selección">
     <div>
-      <b>Es momento de reabastecer.</b> Hay {{{length}}} productos en su nivel
-      mínimo o por debajo. <a href="#orders">Crear un pedido →</a>
+      <span>VENTAS DE LA SELECCIÓN</span
+      ><strong id="dashboard-selected-total">{{{selectedTotal}}}</strong
+      ><small>{{{selectedLabel}}}</small>
     </div>
-  </div>
-</template>
-
-<template id="dashboard-5">
-  <div class="row-title">
-    <span class="product-icon">{{{icon}}}</span>
-    <div><strong>{{{esc}}}</strong><small>{{{esc3}}}</small></div>
-  </div>
-</template>
-
-<template id="dashboard-6">
-  <div class="activity">
-    <div>
-      <strong>{{{esc}}}</strong>
-      <p>{{{esc2}}} · {{{date}}}</p>
-    </div>
-    <b>{{{slot4}}}{{{delta}}}</b>
-  </div>
-</template>
-
-<template id="dashboard-7">
-  <a class="quick-action" href="#{{{key}}}">{{{icon}}}{{{label}}}</a>
-</template>
-
-<template id="dashboard-8">
-  <div class="activity">
-    <div>
-      <strong>{{{esc}}}</strong>
-      <p>{{{idLabel}}} · {{{date}}}</p>
-    </div>
-    {{{button}}}
-  </div>
-</template>
-
-<template id="dashboard-9">
-  <p class="muted">No tienes pedidos pendientes.</p>
-  <a href="#orders">Preparar el primer pedido →</a>
-</template>
-
-<template id="dashboard-1">
-  {{{head}}}
-  <div class="stats">{{{slot2}}}</div>
-  {{{slot3}}}
-  <div class="dashboard-grid">
-    <div>
-      <section class="card">
-        <div class="card-header">
-          <h2>Atención al inventario</h2>
-          <a href="#inventory">Ver inventario →</a>
+    <dl>
+      <div>
+        <dt>Facturas</dt>
+        <dd>{{{selectedCount}}}</dd>
+      </div>
+      <div>
+        <dt>Unidades</dt>
+        <dd>{{{units}}}</dd>
+      </div>
+      <div>
+        <dt>Ticket promedio</dt>
+        <dd>{{{averageTicket}}}</dd>
+      </div>
+      <div>
+        <dt>Promedio diario</dt>
+        <dd>{{{dailyAverage}}}</dd>
+        <small>{{{eligibleDays}}} días disponibles</small>
+      </div>
+    </dl>
+  </section>
+  {{{selectionNotice}}}
+  <div class="dashboard-analysis-grid">
+    <section class="dashboard-panel" aria-labelledby="weekly-sales-title">
+      <header class="dashboard-panel-heading">
+        <div>
+          <h2 id="weekly-sales-title">Ventas de la semana</h2>
+          <p>{{{weekRange}}}</p>
         </div>
-        {{{table}}}
-      </section>
-      <section class="card">
-        <div class="card-header">
-          <h2>Actividad reciente</h2>
-          <span class="badge">Inventario</span>
+        <span class="dashboard-unit">CRC · IVA incluido</span>
+      </header>
+      {{{dayControls}}}
+      <div
+        class="dashboard-chart"
+        role="group"
+        aria-label="Ventas por día de la semana"
+      >
+        <div class="dashboard-axis" aria-hidden="true">{{{axis}}}</div>
+        <div class="dashboard-bars">{{{bars}}}</div>
+      </div>
+      <p class="dashboard-chart-help">
+        Pulsa una barra para incluir o quitar ese día de la selección semanal.
+        Los días atenuados no forman parte de esa selección.
+      </p>
+    </section>
+    <section class="dashboard-panel" aria-labelledby="payments-title">
+      <header class="dashboard-panel-heading">
+        <div>
+          <h2 id="payments-title">Medios de pago</h2>
+          <p>Importes de la selección</p>
         </div>
-        <div class="card-body">{{{slot5}}}</div>
-      </section>
-    </div>
-    <div>
-      <section class="card">
-        <div class="card-header"><h2>Accesos rápidos</h2></div>
-        <div class="card-body quick-actions">{{{slot6}}}</div>
-      </section>
-      <section class="card">
-        <div class="card-header">
-          <h2>Pedidos por recibir</h2>
-          <span class="badge amber">{{{length}}}</span>
-        </div>
-        <div class="card-body">{{{slot8}}}</div>
-      </section>
-    </div>
+      </header>
+      <div class="dashboard-payments">{{{payments}}}</div>
+      <p class="dashboard-chart-help">
+        Efectivo corresponde a ventas cobradas, descontando el vuelto. Estos
+        importes no son el saldo físico de caja ni depósitos bancarios.
+      </p>
+    </section>
   </div>
+  <div class="dashboard-ranking-grid">
+    <section class="dashboard-panel" aria-labelledby="top-products-title">
+      <header class="dashboard-panel-heading">
+        <div>
+          <h2 id="top-products-title">Artículos más vendidos</h2>
+          <p>
+            Los 10 primeros por unidades · {{{productCount}}} artículos vendidos
+          </p>
+        </div>
+      </header>
+      <div id="dashboard-top-products">{{{productTable}}}</div>
+    </section>
+    <section class="dashboard-panel" aria-labelledby="supplier-products-title">
+      <header class="dashboard-panel-heading">
+        <div>
+          <h2 id="supplier-products-title">Más vendidos por proveedor</h2>
+          <p>Artículos asociados en el catálogo actual</p>
+        </div>
+      </header>
+      <div class="dashboard-supplier-filter">{{{supplierSelect}}}</div>
+      <div id="dashboard-supplier-ranking">{{{supplierRanking}}}</div>
+      <p class="dashboard-chart-help">
+        Se muestran 3 artículos por proveedor o hasta 10 al elegir uno. Un
+        artículo con varios proveedores aparece en cada catálogo; esos grupos no
+        se suman entre sí ni identifican quién entregó cada unidad.
+      </p>
+    </section>
+  </div>
+  <footer class="dashboard-operations">
+    <a href="#inventory"
+      ><strong>{{{low}}}</strong> productos en mínimo o agotados
+      <span>Ver inventario →</span></a
+    ><a href="#orders"
+      ><strong>{{{pending}}}</strong> pedidos pendientes
+      <span>Revisar pedidos →</span></a
+    >
+  </footer>
+  <p class="dashboard-scope-note">
+    Ventas vigentes, con IVA y descuentos aplicados. Las facturas anuladas se
+    excluyen. Fechas del negocio en Costa Rica.
+  </p>
+</template>
+
+<template id="dashboard-day-filters">
+  <fieldset class="dashboard-day-filters">
+    <legend>Días de la semana incluidos</legend>
+    <div class="dashboard-day-options">{{{days}}}</div>
+  </fieldset>
+  <div class="dashboard-day-presets">
+    <button type="button" data-days-preset="all">Toda la semana</button
+    ><button type="button" data-days-preset="work">Lunes a viernes</button
+    ><button type="button" data-days-preset="weekend">Fin de semana</button>
+  </div>
+</template>
+
+<template id="dashboard-day-option">
+  <label
+    ><input
+      type="checkbox"
+      name="dashboardDay"
+      value="{{{day}}}"
+      aria-label="{{{label}}}"
+      {{{checked}}}
+      {{{disabled}}}
+    /><span>{{{short}}}</span></label
+  >
+</template>
+
+<template id="dashboard-week-context">
+  <p class="dashboard-chart-help">
+    El gráfico muestra la semana de referencia. El detalle de pagos y artículos
+    corresponde al período elegido arriba. Pulsa una barra para pasar a
+    selección semanal.
+  </p>
+</template>
+
+<template id="dashboard-axis-tick"><span>{{{amount}}}</span></template>
+
+<template id="dashboard-bar">
+  <button
+    type="button"
+    class="dashboard-bar"
+    data-chart-day="{{{weekday}}}"
+    aria-pressed="{{{pressed}}}"
+    aria-label="{{{label}}}"
+    {{{disabled}}}
+  >
+    <span class="dashboard-bar-amount" aria-hidden="true">{{{amount}}}</span>
+    <svg viewBox="0 0 48 154" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="0" x2="48" y1="150" y2="150"></line>
+      <rect x="8" y="{{{y}}}" width="32" height="{{{height}}}" rx="4"></rect>
+    </svg>
+    <span class="dashboard-bar-day" aria-hidden="true"
+      >{{{short}}}<small>{{{dayNumber}}}</small></span
+    >
+  </button>
+</template>
+
+<template id="dashboard-no-days">
+  <p class="notice info">
+    No hay días disponibles seleccionados. Marca un día de la semana o cambia la
+    fecha de referencia para consultar ventas.
+  </p>
+</template>
+
+<template id="dashboard-payment">
+  <article class="dashboard-payment" data-payment="{{{key}}}">
+    <span class="dashboard-payment-symbol" aria-hidden="true"
+      >{{{symbol}}}</span
+    >
+    <div>
+      <h3>{{{name}}}</h3>
+      <small>{{{count}}} facturas · {{{percentage}}}%</small>
+    </div>
+    <strong>{{{total}}}</strong>
+    <meter
+      min="0"
+      max="100"
+      value="{{{share}}}"
+      aria-label="Porcentaje de ventas en {{{name}}}"
+    >
+      {{{percentage}}}%
+    </meter>
+  </article>
+</template>
+
+<template id="dashboard-product">
+  <div class="dashboard-product">
+    <span>{{{rank}}}</span>
+    <div><strong>{{{name}}}</strong><small>{{{code}}}</small></div>
+  </div>
+</template>
+
+<template id="dashboard-supplier">
+  <section class="dashboard-supplier-group">
+    <header>
+      <h3>{{{name}}}</h3>
+      <span>{{{units}}} unidades</span>
+    </header>
+    {{{detail}}}
+  </section>
+</template>
+
+<template id="dashboard-no-supplier-sales">
+  <p class="empty">
+    No hay ventas de artículos asociados a este proveedor en la selección.
+  </p>
 </template>

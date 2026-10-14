@@ -1,4 +1,5 @@
 import { spreadsheet } from "../views/spreadsheet.js";
+import { salesDashboard } from "../models/dashboard.js";
 import {
   recommendOrders,
   saveRecommendedOrder,
@@ -199,6 +200,8 @@ export function createApp({
         }
         if (path === "/api/state" && method === "GET")
           return send(200, snapshot(store.read(), user));
+        if (path === "/api/dashboard" && method === "GET")
+          return send(200, salesDashboard(store.read(), url.searchParams));
         if (path === "/api/orders/recommendations" && method === "GET")
           return send(200, recommendOrders(store.read()));
         if (path === "/api/reports" && method === "GET") {

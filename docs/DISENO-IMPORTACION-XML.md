@@ -84,3 +84,11 @@ DM Sans y Manrope provienen del [repositorio oficial de Google Fonts](https://gi
 El CSS del tema está limitado a pantalla. Los tickets mantienen fondo blanco, texto negro y anchos de 80/58 mm; las compras y reportes siguen en A4. Se conserva el foco visible de teclado, se reducen animaciones con `prefers-reduced-motion` y se ofrecen superficies opacas con `prefers-reduced-transparency`. Esto no constituye una certificación de accesibilidad.
 
 La organización y los puntos de edición se explican en [Arquitectura MVC](ARQUITECTURA-MVC.md).
+
+## Dashboard comercial de ventas
+
+El 14 de octubre de 2026 se intentó consultar `qupos.com`, `www.qupos.com`, `ncq.co.cr` y `www.ncq.co.cr` como referencias para la nueva solicitud. El proxy del entorno devolvió 403 en esos accesos; no se pudo verificar su interfaz actual. Esta versión no se presenta como réplica exacta, integración ni diseño oficial de NCQ Qupos.
+
+Se implementó una composición propia de panel comercial: barra lateral azul marino, área de lectura clara, indicadores de calendario, resumen de la selección, gráfico semanal junto a cobros y tablas de artículos. El azul identifica acciones y selección; verde y ámbar distinguen indicadores secundarios sin depender solo del color. La barra lateral mantiene su posición y sus módulos. El tema se limita a Resumen; las pantallas operativas conservan el Glassmorphism solicitado antes.
+
+Los filtros tienen etiquetas explícitas y el gráfico se maneja también mediante botones y casillas con teclado. Cada barra ofrece fecha, importe y número de ventas a tecnologías de asistencia. Los estados sin datos muestran ceros reales y explicaciones; no se introducen porcentajes de crecimiento ni tendencias inventadas. Las tarjetas de períodos completos se distinguen del detalle filtrado, y el ranking por proveedor explica las asociaciones compartidas. Las capturas del dashboard usan exclusivamente datos sintéticos de pruebas.

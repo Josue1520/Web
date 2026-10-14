@@ -11,6 +11,7 @@ La aplicación conserva Node.js, SQLite y JavaScript nativo. La separación MVC 
 | Modelo | `src/models/domain.js` | Permisos, validaciones de negocio, pedidos, ventas, compras, inventario y reportes. |
 | Modelo | `src/models/store.js` | Persistencia y transacciones SQLite, contraseñas y datos iniciales. |
 | Modelo | `src/models/order-recommendations.js` | Calcular faltantes, descontar pendientes, asignar proveedor y comprobar propuestas antes de confirmar. |
+| Modelo | `src/models/dashboard.js` | Validar filtros y agregar ventas por calendario, pago, producto y proveedor del catálogo. |
 | Modelo | `src/models/purchase-xml.js` | Leer y validar el documento, asociar productos y registrar la compra. |
 | Vista | `src/views/spreadsheet.js` | Convertir el resultado del reporte en SpreadsheetML para Excel. |
 
@@ -24,7 +25,7 @@ El modelo no importa controladores ni vistas. Las operaciones que modifican inve
 | Controlador | `public/js/controllers/` | Leer formularios, atender eventos, llamar al modelo y actualizar la vista. Hay controladores de catálogo, inventario, pedidos, compras, ventas, reportes y usuarios. |
 | Vista HTML | `public/views/` | Estructura de las pantallas, formularios, filas, diálogos y comprobantes. |
 | Presentación JS | `public/js/views/` | Formato de moneda/fechas, composición de componentes, navegación, diálogo, notificaciones e impresión. |
-| Presentación CSS | `public/styles/index.css`, `glass.css` | Distribución y reglas de impresión; tema oscuro aplicado exclusivamente a pantalla. |
+| Presentación CSS | `public/styles/index.css`, `glass.css`, `dashboard.css` | Distribución e impresión; tema oscuro y estilos locales del dashboard aplicados exclusivamente a pantalla. |
 
 `public/index.html` contiene el documento inicial, el contenedor de la aplicación, el diálogo y el área de impresión. `public/js/app.js` carga las plantillas y arranca el controlador principal mediante módulos ES. No hay JavaScript ni CSS en línea en las plantillas.
 
@@ -75,3 +76,13 @@ La base sigue en `data/sipro.sqlite` y conserva su esquema. Esta reorganización
 `POST /api/orders/recommendations` recibe el proveedor, las líneas editadas y el token de la propuesta. Recalcula y compara dentro de `store.change()` antes de usar las validaciones normales de `saveOrder()`. El token incluye los datos del grupo y el último pedido de ese proveedor: una segunda confirmación del mismo borrador no crea otra compra, incluso si se sustituyeron los artículos originalmente sugeridos. Un conflicto devuelve 409 y permite recalcular. Los pedidos guardados conservan `origin: "recommended"`, también al editarlos.
 
 No hay migración de esquema ni cambio de formato de los pedidos anteriores. El controlador HTTP exige la misma sesión y protección de origen que para los pedidos manuales. La recomendación no es un permiso para omitir mínimos comerciales, artículos activos ni asociaciones válidas.
+
+## Estadísticas de ventas
+
+`GET /api/dashboard?period=week&date=2026-10-14&days=1,2,3&supplierId=2` requiere sesión y permite ambos roles. `period` acepta `day`, `week` o `month`; `days` usa lunes=1 a domingo=7, omitido incluye todos y vacío no incluye ninguno. Los días se aplican al detalle semanal. `supplierId` es opcional y solo filtra el ranking por proveedor. Los filtros inválidos devuelven 400. La fecha de referencia debe estar entre el inicio de la instalación y el día actual del negocio.
+
+El modelo del servidor calcula rangos calendario, tarjetas completas, totales seleccionados, promedios, pagos, series semanales con ceros y rankings. Agrega importes en centavos; usa el total de cada factura emitida después de descuentos e IVA y excluye anuladas. No modifica registros ni añade operaciones de ejemplo. La agrupación por proveedores usa las asociaciones actuales de cada producto, no lotes de inventario.
+
+`public/js/models/dashboard-model.js` conserva los filtros durante la navegación y solicita los datos. `public/js/controllers/dashboard.js` coordina controles y composición; descarta respuestas de filtros anteriores o vistas que ya se cerraron y restaura el foco tras cambiar días/proveedor. `public/views/dashboard.html` contiene las plantillas y `public/styles/dashboard.css` el tema local, adaptado a móvil. El gráfico usa SVG con atributos numéricos y botones accesibles, sin scripts ni estilos en línea ni dependencias externas. No se altera la impresión de tickets.
+
+`tests/dashboard.test.js` verifica períodos, límites de calendario, pagos, descuentos, anulaciones, ranking compartido y permisos. `tests/browser-dashboard.mjs` comprueba los filtros reales, la selección vacía, navegación con respuestas concurrentes, escape de nombres, persistencia y ausencia de desbordamiento en móvil, siempre con una base temporal.

@@ -54,6 +54,7 @@ async function signIn(username, password) {
 try {
   await page.goto(base);
   await signIn("admin", "Admin123!");
+  await page.locator('#sales-dashboard[aria-busy="false"]').waitFor();
   await page.screenshot({ path: "test-results/resumen.png", fullPage: true });
   // Registro real de proveedor y producto, incluyendo su relación.
   await navigate("Proveedores");
