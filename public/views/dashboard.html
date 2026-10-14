@@ -1,0 +1,95 @@
+<!-- Vistas de dashboard. Los marcadores reciben valores escapados o fragmentos de vista. -->
+
+<template id="dashboard-2">
+  <a href="#invoices" class="btn primary">＋ Nueva factura</a>
+</template>
+
+<template id="dashboard-3">
+  <article class="stat {{{slot1}}}">
+    <div class="stat-top">{{{label}}}{{{icon}}}</div>
+    <strong>{{{value}}}</strong><small>{{{note}}}</small>
+  </article>
+</template>
+
+<template id="dashboard-4">
+  <div class="notice">
+    {{{icon}}}
+    <div>
+      <b>Es momento de reabastecer.</b> Hay {{{length}}} productos en su nivel
+      mínimo o por debajo. <a href="#orders">Crear un pedido →</a>
+    </div>
+  </div>
+</template>
+
+<template id="dashboard-5">
+  <div class="row-title">
+    <span class="product-icon">{{{icon}}}</span>
+    <div><strong>{{{esc}}}</strong><small>{{{esc3}}}</small></div>
+  </div>
+</template>
+
+<template id="dashboard-6">
+  <div class="activity">
+    <div>
+      <strong>{{{esc}}}</strong>
+      <p>{{{esc2}}} · {{{date}}}</p>
+    </div>
+    <b>{{{slot4}}}{{{delta}}}</b>
+  </div>
+</template>
+
+<template id="dashboard-7">
+  <a class="quick-action" href="#{{{key}}}">{{{icon}}}{{{label}}}</a>
+</template>
+
+<template id="dashboard-8">
+  <div class="activity">
+    <div>
+      <strong>{{{esc}}}</strong>
+      <p>{{{idLabel}}} · {{{date}}}</p>
+    </div>
+    {{{button}}}
+  </div>
+</template>
+
+<template id="dashboard-9">
+  <p class="muted">No tienes pedidos pendientes.</p>
+  <a href="#orders">Preparar el primer pedido →</a>
+</template>
+
+<template id="dashboard-1">
+  {{{head}}}
+  <div class="stats">{{{slot2}}}</div>
+  {{{slot3}}}
+  <div class="dashboard-grid">
+    <div>
+      <section class="card">
+        <div class="card-header">
+          <h2>Atención al inventario</h2>
+          <a href="#inventory">Ver inventario →</a>
+        </div>
+        {{{table}}}
+      </section>
+      <section class="card">
+        <div class="card-header">
+          <h2>Actividad reciente</h2>
+          <span class="badge">Inventario</span>
+        </div>
+        <div class="card-body">{{{slot5}}}</div>
+      </section>
+    </div>
+    <div>
+      <section class="card">
+        <div class="card-header"><h2>Accesos rápidos</h2></div>
+        <div class="card-body quick-actions">{{{slot6}}}</div>
+      </section>
+      <section class="card">
+        <div class="card-header">
+          <h2>Pedidos por recibir</h2>
+          <span class="badge amber">{{{length}}}</span>
+        </div>
+        <div class="card-body">{{{slot8}}}</div>
+      </section>
+    </div>
+  </div>
+</template>

@@ -1,0 +1,94 @@
+<!-- Vistas de orders. Los marcadores reciben valores escapados o fragmentos de vista. -->
+
+<template id="orders-page-1">
+  {{{head}}}{{{filters}}}
+  <div class="card" id="listing"></div>
+</template>
+
+<template id="orders-page-2">
+  <div class="actions">{{{button}}}{{{slot2}}}</div>
+</template>
+
+<template id="edit-order-1">
+  <form id="order-form" class="stack-gap">
+    {{{select}}}
+    <div id="order-terms" class="notice info"></div>
+    <div id="order-picker" class="line-add"></div>
+    <div id="order-lines"></div>
+    {{{field}}}
+    <p class="error" role="alert"></p>
+    <div class="dialog-footer">
+      {{{button}}}<button class="btn primary" type="submit">
+        Revisar pedido
+      </button>
+    </div>
+  </form>
+</template>
+
+<template id="edit-order-2">
+  {{{select}}}{{{field}}}<button class="btn" type="button" id="add-order-line">
+    Agregar
+  </button>
+</template>
+
+<template id="edit-order-3">
+  <input
+    class="cart-input"
+    aria-label="Cantidad de {{{esc}}}"
+    type="number"
+    min="1"
+    step="1"
+    value="{{{qty}}}"
+    data-order-line="{{{i}}}"
+  />
+</template>
+
+<template id="edit-order-4">
+  <button
+    class="btn small danger"
+    type="button"
+    data-remove-order="{{{i}}}"
+    aria-label="Quitar {{{esc}}}"
+  >
+    ×
+  </button>
+</template>
+
+<template id="edit-order-5">
+  <div class="total-line">
+    <strong>Total estimado</strong><strong>{{{crc}}}</strong>
+  </div>
+</template>
+
+<template id="edit-order-6">
+  <p>Proveedor: <b>{{{esc}}}</b></p>
+  {{{review}}}
+  <p>{{{esc3}}}</p>
+  <p class="error" role="alert"></p>
+  <div class="dialog-footer">
+    <button class="btn" id="back-order">Volver a editar</button
+    ><button class="btn primary" id="confirm-order">Confirmar pedido</button>
+  </div>
+</template>
+
+<template id="view-order-2">
+  <p class="form-help">
+    Confirma la recepción cuando hayas recibido todos los productos. Esta acción
+    suma las cantidades al inventario una sola vez.
+  </p>
+  <p class="error" role="alert"></p>
+  <div class="dialog-footer">{{{button}}}</div>
+</template>
+
+<template id="view-order-1">
+  <div class="detail-grid">
+    <div><small>Proveedor</small>{{{esc}}}</div>
+    <div><small>Estado</small>{{{statusBadge}}}</div>
+    <div><small>Fecha</small>{{{date}}}</div>
+    <div><small>Recibido</small>{{{date4}}}</div>
+  </div>
+  {{{table}}}
+  <div class="total-line grand"><span>Total</span><span>{{{crc}}}</span></div>
+  <p>{{{esc7}}}</p>
+  {{{slot8}}}
+</template>

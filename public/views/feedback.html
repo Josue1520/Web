@@ -1,0 +1,29 @@
+<!-- Vistas de feedback. Los marcadores reciben valores escapados o fragmentos de vista. -->
+
+<template id="open-dialog-1">
+  <div class="dialog-head">
+    <h2 id="dialog-title">{{{title}}}</h2>
+    <button class="close" type="button" data-action="close" aria-label="Cerrar">
+      ×
+    </button>
+  </div>
+  <div class="dialog-body">{{{content}}}</div>
+</template>
+
+<template id="print-document-1">
+  <div class="print-heading">
+    <div>
+      <h1>SIPRO</h1>
+      <p>Mini súper / Licorera</p>
+    </div>
+    <div>
+      <h2>{{{esc}}}</h2>
+      <p>{{{date}}}</p>
+    </div>
+  </div>
+  {{{content}}}
+  <p class="print-note">
+    SIPRO · Demostración académica. Comprobante interno sin validez de factura
+    electrónica.
+  </p>
+</template>

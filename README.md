@@ -1,6 +1,6 @@
 # SIPRO — Sistema de Gestión de Pedidos a Proveedores
 
-Demostración funcional para un Mini Súper / Licorera, basada en **Proyecto de Sistemas.pdf** y en las pantallas del ZIP original. Incluye siete módulos conectados, datos persistentes y dos roles. Conserva el nombre, los productos iniciales y el cálculo de precios con IVA incluido de la propuesta de facturación original, con una interfaz de operaciones en azul y blanco para el trabajo diario.
+Demostración funcional para un Mini Súper / Licorera, basada en **Proyecto de Sistemas.pdf** y en las pantallas del ZIP original. Incluye siete módulos conectados, datos persistentes y dos roles. Conserva el nombre, los productos iniciales y el cálculo de precios con IVA incluido. La interfaz usa un tema oscuro Glassmorphism con barra lateral; el código sigue una organización MVC con plantillas HTML, estilos CSS y módulos JavaScript separados.
 
 ## Ejecutar
 
@@ -38,7 +38,7 @@ Estas cuentas contienen datos ficticios para la presentación. En **Usuarios** p
 
 ## Caja, ventas guardadas y tickets
 
-La interfaz recupera el **azul de la primera versión** (#1f5a99 y #153c66), con una distribución nueva: barra lateral agrupada, plegable en móvil, resumen en una franja de indicadores, buscadores integrados con sus tablas y formularios de superficies planas. La caja prioriza la entrada de artículos y coloca el cliente debajo; el panel de cobro permanece a la derecha en escritorio. Acceso, catálogo, compras, reportes y diálogos comparten el nuevo sistema visual. Las [decisiones y fuentes](docs/DISENO-IMPORTACION-XML.md) explican los cambios. Conserva la identidad de SIPRO; no es una integración ni una reproducción oficial de Qupos.
+La interfaz usa fondo **#090d17**, acento lavanda **#bfa8ff**, superficies translúcidas, bordes suaves y transiciones discretas. Conserva la barra lateral agrupada y plegable en móvil. La caja prioriza la entrada de artículos y coloca el cliente debajo; el panel de cobro permanece a la derecha en escritorio amplio. Acceso, catálogo, compras, reportes y diálogos comparten el tema. Las fuentes **DM Sans y Manrope** se sirven localmente, con sus licencias: no necesitan conexión a Google. La impresión conserva papel blanco y texto oscuro, independiente del tema. Las [decisiones y fuentes](docs/DISENO-IMPORTACION-XML.md) explican la evolución. Conserva la identidad de SIPRO; no es una integración ni una reproducción oficial de Qupos.
 
 ![Pantalla de caja de SIPRO](docs/capturas/caja.png)
 
@@ -153,16 +153,26 @@ Los recorridos de navegador incluyen importación XML, alta de proveedor/product
 ## Estructura
 
 ```text
-public/               HTML, estilos y JavaScript de la interfaz
-server.js             Servidor HTTP, API, sesiones y exportación Excel
-src/domain.js         Validaciones, permisos y operaciones de negocio
-src/store.js          SQLite y datos de demostración
-tests/               Pruebas de integración y recorrido en navegador
-docs/                 Correspondencia con el PDF y referencia original
-data/                 Base local generada (no se incluye en Git)
+server.js                  Entrada del servidor y cierre ordenado
+src/controllers/           Controlador HTTP, sesiones y rutas API
+src/models/                Negocio, validación XML y persistencia SQLite
+src/views/                 Presentación del reporte Excel
+public/index.html          Documento inicial
+public/views/              Plantillas HTML por módulo y componentes
+public/js/app.js           Arranque de la interfaz
+public/js/models/          Estado del cliente, API y totales provisionales
+public/js/controllers/     Eventos y coordinación de cada módulo
+public/js/views/           Composición, formato y presentación de vistas
+public/styles/             CSS estructural, impresión y tema Glassmorphism
+public/fonts/              Tipografías locales y licencias OFL
+tests/                     Pruebas de integración, vistas y navegador
+docs/                      Arquitectura, requisitos y capturas
+data/                      Base local generada (no se incluye en Git)
 ```
 
 Las rutas originales `/Vistas/Login.html`, `/Vistas/Index.html` y `/Vistas/Facturar.html` siguen funcionando a través del servidor. La versión original de facturación se conserva en `docs/Facturar-original.html` como referencia; no se sirve como parte de la aplicación.
+
+Consulta [la arquitectura MVC](docs/ARQUITECTURA-MVC.md) para saber qué archivo editar según el cambio. No se requiere compilación ni un framework adicional. Para actualizar una instalación, detén el servidor, guarda una copia de `data/`, reemplaza el código conservando esa carpeta y ejecuta `npm ci` y `npm start`.
 
 ## Alcance académico
 

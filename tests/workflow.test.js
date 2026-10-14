@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../server.js";
-import { openStore } from "../src/store.js";
+import { openStore } from "../src/models/store.js";
 
 let app, base, dir, token;
 async function call(path, method = "GET", body, cookie = token) {

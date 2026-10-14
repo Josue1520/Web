@@ -5,8 +5,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createApp } from "../server.js";
-import { openStore, today } from "../src/store.js";
-import { parsePurchaseXml } from "../src/purchase-xml.js";
+import { openStore, today } from "../src/models/store.js";
+import { parsePurchaseXml } from "../src/models/purchase-xml.js";
 import { invoiceXml, taxedInvoiceXml } from "./xml-fixture.js";
 
 let app, base, cookie, dir;

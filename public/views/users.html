@@ -1,0 +1,21 @@
+<!-- Vistas de users. Los marcadores reciben valores escapados o fragmentos de vista. -->
+
+<template id="users-page-1">
+  {{{head}}}
+  <div class="notice info">
+    <div>
+      <b>Administrador:</b> gestiona usuarios, proveedores, productos e
+      inventario; recibe pedidos, anula facturas y exporta reportes.<br /><b
+        >Dependiente:</b
+      >
+      consulta catálogos y existencias, prepara pedidos, factura y consulta
+      reportes operativos.
+    </div>
+  </div>
+  {{{filters}}}
+  <div class="card" id="listing"></div>
+</template>
+
+<template id="users-page-2">
+  {{{esc}}} {{{esc2}}}<small>{{{esc3}}}</small>
+</template>

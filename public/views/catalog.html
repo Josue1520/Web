@@ -1,0 +1,86 @@
+<!-- Vistas de catalog. Los marcadores reciben valores escapados o fragmentos de vista. -->
+
+<template id="suppliers-page-1">
+  {{{head}}}{{{filters}}}
+  <div class="card" id="listing"></div>
+</template>
+
+<template id="suppliers-page-2">
+  <strong>{{{esc}}}</strong><small>{{{esc2}}} · {{{esc3}}}</small>
+</template>
+
+<template id="suppliers-page-3">
+  {{{esc}}}<small>{{{esc2}}} · {{{esc3}}}</small>
+</template>
+
+<template id="suppliers-page-4">
+  {{{esc}}}<small>{{{days}}} días · Mínimo {{{crc}}}</small>
+</template>
+
+<template id="suppliers-page-5">
+  <div class="actions">{{{button}}}{{{slot2}}}</div>
+</template>
+
+<template id="products-page-1">
+  {{{head}}}{{{filters}}}
+  <div class="card" id="listing"></div>
+</template>
+
+<template id="products-page-2">
+  <strong>{{{esc}}}</strong><small>{{{esc2}}} · {{{esc3}}}</small>
+</template>
+
+<template id="products-page-3">
+  <div class="actions">{{{button}}}{{{slot2}}}</div>
+</template>
+
+<template id="edit-product-2"> <option value="{{{esc}}}"></option></template>
+
+<template id="edit-product-1">
+  {{{field}}}{{{field2}}}{{{field3}}}<datalist id="categories">
+    {{{slot4}}}</datalist
+  >{{{field5}}}{{{field6}}}{{{field7}}}{{{field8}}}{{{select}}}{{{slot10}}}
+  <div class="wide">
+    {{{field11}}}
+    <div class="offer-title">
+      <h3>Proveedores asociados</h3>
+      {{{button}}}
+    </div>
+    <div id="offers">{{{slot13}}}</div>
+    <p class="form-help">
+      Asocia un proveedor y su precio de compra para poder incluir el producto
+      en nuevos pedidos.
+    </p>
+  </div>
+</template>
+
+<template id="view-product-1">
+  <div class="detail-grid">
+    <div><small>Código</small>{{{esc}}}</div>
+    <div><small>Categoría</small>{{{esc2}}}</div>
+    <div><small>Presentación</small>{{{esc3}}}</div>
+    <div><small>Precio de venta</small>{{{crc}}} · IVA {{{tax}}}% incluido</div>
+    <div><small>Existencias / mínimo</small>{{{stock}}} / {{{minimum}}}</div>
+    <div><small>Estado</small>{{{statusBadge}}}</div>
+  </div>
+  <p>{{{esc9}}}</p>
+  <h3>Proveedores asociados</h3>
+  {{{table}}}
+</template>
+
+<template id="view-supplier-2"> {{{esc}}}<small>{{{esc2}}}</small> </template>
+
+<template id="view-supplier-1">
+  <div class="detail-grid">
+    <div><small>Identificación</small>{{{esc}}} · {{{esc2}}}</div>
+    <div><small>Contacto</small>{{{esc3}}}</div>
+    <div><small>Teléfono y correo</small>{{{esc4}}}<br />{{{esc5}}}</div>
+    <div><small>Dirección</small>{{{esc6}}}</div>
+    <div><small>Condición de pago</small>{{{esc7}}} · {{{days}}} días</div>
+    <div>
+      <small>Entrega / pedido mínimo</small>{{{delivery}}} días · {{{crc}}}
+    </div>
+  </div>
+  <h3>Catálogo del proveedor</h3>
+  {{{table}}}
+</template>

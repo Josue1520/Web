@@ -1,0 +1,39 @@
+<!-- Vistas de auth. Los marcadores reciben valores escapados o fragmentos de vista. -->
+
+<template id="login-1">
+  <div class="login-layout">
+    <section class="login-story">
+      {{{brand}}}
+      <div class="eyebrow story-label">Mini súper · Licorera</div>
+      <h1>Compras,<br />inventario y caja.</h1>
+      <p>Administración del mini súper y licorera.</p>
+      <div class="login-features">
+        <span><b>01 / Compras</b> Pedidos y facturas de proveedores</span
+        ><span><b>02 / Inventario</b> Productos, existencias y movimientos</span
+        ><span><b>03 / Caja</b> Ventas y tickets de 80 mm</span>
+      </div>
+    </section>
+    <main class="login-panel">
+      <div class="login-card">
+        <div class="eyebrow">Bienvenido a SIPRO</div>
+        <h1>Iniciar sesión</h1>
+        <p class="muted">Ingresa tus credenciales para continuar.</p>
+        <form id="login-form" class="stack">
+          {{{field}}}{{{field3}}}
+          <div class="error" role="alert"></div>
+          <button class="btn primary block">
+            Ingresar al sistema {{{icon}}}
+          </button>
+        </form>
+        <div class="demo-box">
+          <strong>Accesos de demostración</strong>Administrador: <b>admin</b> /
+          <b>Admin123!</b><br />Dependiente: <b>dependiente</b> /
+          <b>Caja123!</b>
+        </div>
+        <p class="login-footer">
+          Proyecto académico · Los datos se conservan en este servidor.
+        </p>
+      </div>
+    </main>
+  </div>
+</template>

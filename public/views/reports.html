@@ -1,0 +1,47 @@
+<!-- Vistas de reports. Los marcadores reciben valores escapados o fragmentos de vista. -->
+
+<template id="reports-page-1">
+  {{{head}}}
+  <section class="card">
+    <div class="card-body">
+      <form id="report-form" class="filters">
+        {{{select}}}{{{field}}}{{{field4}}}{{{select5}}}{{{select6}}}<button
+          class="btn primary"
+          type="submit"
+        >
+          Consultar
+        </button>
+      </form>
+      <div class="error" id="report-error" role="alert"></div>
+    </div>
+  </section>
+  <div id="report-result">
+    <div class="card empty">
+      Selecciona un reporte y consulta los resultados.
+    </div>
+  </div>
+</template>
+
+<template id="reports-page-2">
+  <div class="card empty">
+    Los filtros cambiaron. Pulsa Consultar para actualizar el reporte.
+  </div>
+</template>
+
+<template id="reports-page-4">
+  <div class="actions">{{{button}}}{{{button2}}}</div>
+</template>
+
+<template id="reports-page-3">
+  <div class="report-toolbar">
+    <div>
+      <h2>{{{esc}}}</h2>
+      <small>{{{slot2}}} · {{{length}}} registros</small>
+    </div>
+    {{{slot4}}}
+  </div>
+  <div class="card">
+    {{{table}}}
+    <div class="report-footnote">{{{slot6}}}</div>
+  </div>
+</template>

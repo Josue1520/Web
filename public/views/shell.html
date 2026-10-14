@@ -1,0 +1,45 @@
+<!-- Vistas de shell. Los marcadores reciben valores escapados o fragmentos de vista. -->
+
+<template id="shell-2">
+  <a href="#{{{key}}}" class="{{{slot2}}}" {{{slot3}}}>{{{icon}}}{{{slot5}}}</a>
+</template>
+
+<template id="shell-1">
+  <div class="nav-group">
+    <span class="nav-caption">{{{group}}}</span>
+    <div>{{{slot2}}}</div>
+  </div>
+</template>
+
+<template id="shell-3">
+  <div class="shell">
+    <aside class="workspace-sidebar">
+      {{{brand}}}
+      <details id="workspace-menu" {{{slot2}}}>
+        <summary>Menú de navegación</summary>
+        <nav class="nav-links" aria-label="Módulos">{{{navigation}}}</nav>
+      </details>
+      <div class="sidebar-business">
+        <b>Mini súper / Licorera</b
+        ><span>Sistema de pedidos a proveedores</span>
+      </div>
+    </aside>
+    <div class="main-wrap">
+      <header class="workspace-bar">
+        <div class="workspace-location">
+          Mi negocio <span>/</span> <strong>{{{esc}}}</strong>
+        </div>
+        <div class="user-info">
+          <div class="avatar">{{{esc5}}}{{{esc6}}}</div>
+          <div><b>{{{esc7}}}</b><small>{{{esc8}}}</small></div>
+          {{{button}}}
+        </div>
+      </header>
+      <main class="content" id="content"></main>
+      <footer class="workspace-footer">
+        <span>SIPRO · Sistema de gestión</span
+        ><span>{{{date}}} · Costa Rica</span>
+      </footer>
+    </div>
+  </div>
+</template>

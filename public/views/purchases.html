@@ -1,0 +1,242 @@
+<!-- Vistas de purchases. Los marcadores reciben valores escapados o fragmentos de vista. -->
+
+<template id="purchase-invoices-page-2">
+  <div class="page-actions">{{{button}}}{{{button2}}}</div>
+</template>
+
+<template id="purchase-invoices-page-1">
+  {{{head}}}
+  <div class="notice info">
+    <div>
+      <b>{{{length}}} facturas pendientes de pago · {{{crc}}}</b><br />Una
+      compra directa registra la entrada de mercadería. Una factura asociada a
+      un pedido recibido conserva el inventario existente.
+    </div>
+  </div>
+  {{{filters}}}
+  <div class="card" id="listing"></div>
+</template>
+
+<template id="purchase-invoices-page-3">
+  <strong>{{{esc}}}</strong><small>{{{idLabel}}}{{{slot3}}}</small>
+</template>
+
+<template id="purchase-invoices-page-4">
+  <small>Vence: {{{date}}}</small>
+</template>
+
+<template id="import-purchase-xml-1">
+  <form id="xml-upload" class="stack-gap">
+    <p>
+      Selecciona el XML original que recibiste del proveedor. Podrás revisar el
+      comprobante antes de registrarlo.
+    </p>
+    <label class="xml-file field"
+      >Archivo XML<input
+        name="file"
+        type="file"
+        accept=".xml,application/xml,text/xml"
+        required
+      /><small
+        >Factura electrónica de Costa Rica · 4.3 o 4.4 · UTF-8 · Hasta 1
+        MB</small
+      ></label
+    >
+    <p class="form-help">
+      Importa IVA, impuestos específicos, exoneraciones, cargos y ajustes del
+      proveedor. Se admite mercadería en colones con cantidades enteras.
+    </p>
+    <p class="error" role="alert"></p>
+    <div class="dialog-footer">
+      {{{button}}}<button class="btn primary" type="submit">Revisar XML</button>
+    </div>
+  </form>
+</template>
+
+<template id="import-purchase-xml-3">
+  <p class="form-help">Proveedor asociado: <b>{{{esc}}}</b>{{{slot2}}}</p>
+</template>
+
+<template id="import-purchase-xml-4">
+  <div class="notice">
+    <div>
+      Este emisor todavía no está registrado. Completa sus datos para
+      continuar.<br /><button
+        type="button"
+        class="btn small"
+        id="xml-create-supplier"
+      >
+        Registrar proveedor del XML
+      </button>
+    </div>
+  </div>
+</template>
+
+<template id="import-purchase-xml-5">
+  {{{esc}}}<small>{{{esc2}}} · {{{esc3}}}</small>
+</template>
+
+<template id="import-purchase-xml-6">
+  <div class="xml-mapping">
+    {{{select}}}<button
+      class="btn plain small"
+      type="button"
+      data-xml-product="{{{n}}}"
+      {{{slot3}}}
+    >
+      Crear producto
+    </button>
+  </div>
+</template>
+
+<template id="import-purchase-xml-2">
+  <form id="xml-review" class="stack-gap">
+    <div class="xml-summary">
+      <div>
+        <span class="eyebrow">Factura electrónica {{{esc}}}</span>
+        <h3>{{{esc2}}}</h3>
+        <span>{{{esc3}}} · {{{date}}}</span
+        ><small>Consecutivo {{{esc5}}}</small>
+      </div>
+      <div class="xml-total">
+        <small>Total en colones</small><strong>{{{crc}}}</strong
+        ><span>{{{length}}} líneas de detalle</span>
+      </div>
+    </div>
+    <div class="xml-provenance">
+      <span>Clave: {{{esc8}}}</span><span>Destinatario: {{{slot9}}}</span>
+    </div>
+    {{{slot10}}}
+    <div class="section-heading">
+      <h3>Asociar mercadería</h3>
+      <span>Verifica que las unidades y presentaciones coincidan.</span>
+    </div>
+    {{{table}}} {{{purchaseTaxDetail}}}
+    <div class="form-grid">
+      {{{select}}}{{{select14}}}{{{field}}}{{{field16}}}
+    </div>
+    <p id="xml-stock-effect" class="form-help"></p>
+    <label class="xml-confirm"
+      ><input type="checkbox" name="confirmed" required /> Revisé el
+      destinatario, las unidades y los productos asociados a esta compra.</label
+    >
+    <p class="form-help">
+      El costo de inventario usa el neto de mercadería; impuestos y cargos se
+      registran por separado. Se conserva el XML original. La importación no
+      verifica su firma ni envía una aceptación a Hacienda.
+    </p>
+    <p class="error" role="alert"></p>
+    <div class="dialog-footer">
+      <button class="btn" type="button" id="xml-other-file">
+        Cambiar archivo</button
+      ><button class="btn primary" type="submit" {{{slot17}}}>
+        Guardar factura e importar
+      </button>
+    </div>
+  </form>
+</template>
+
+<template id="new-purchase-invoice-1">
+  <form id="purchase-form" class="stack-gap">
+    <div class="form-grid">
+      {{{select}}}{{{field}}}{{{field3}}}{{{select4}}}
+      <div id="purchase-due">{{{field5}}}</div>
+      {{{field6}}}
+    </div>
+    <div id="purchase-source"></div>
+    <div class="notice info" id="purchase-notice"></div>
+    <div id="purchase-picker" class="line-add"></div>
+    <div id="purchase-lines"></div>
+    <div id="purchase-totals"></div>
+    <p class="form-help">
+      Ingresa el costo unitario <b>sin IVA</b> y el impuesto indicado en la
+      factura. Los importes se calculan por línea; el descuento se aplica antes
+      del IVA. Revisa los datos antes de guardar.
+    </p>
+    <p class="error" role="alert"></p>
+    <div class="dialog-footer">
+      {{{button}}}<button type="submit" class="btn primary">
+        Guardar factura de compra
+      </button>
+    </div>
+  </form>
+</template>
+
+<template id="new-purchase-invoice-2">
+  <div class="total-line"><span>Subtotal sin IVA</span><b>{{{crc}}}</b></div>
+  <div class="total-line"><span>IVA</span><b>{{{crc2}}}</b></div>
+  <div class="total-line grand">
+    <span>Total de compra</span><span>{{{crc3}}}</span>
+  </div>
+</template>
+
+<template id="new-purchase-invoice-3">
+  <input
+    type="number"
+    class="cart-input"
+    value="{{{esc}}}"
+    aria-label="{{{label}}} de {{{esc3}}}"
+    data-purchase-line="{{{i}}}"
+    data-key="{{{key}}}"
+    required
+    min="{{{min}}}"
+    max="{{{max}}}"
+    step="{{{step}}}"
+    {{{slot9}}}
+  />
+</template>
+
+<template id="new-purchase-invoice-4">
+  <button
+    type="button"
+    class="btn small danger"
+    data-remove-purchase="{{{i}}}"
+    aria-label="Quitar {{{esc}}}"
+  >
+    ×
+  </button>
+</template>
+
+<template id="new-purchase-invoice-5">
+  {{{select}}}{{{field}}}<button
+    class="btn"
+    type="button"
+    id="add-purchase-line"
+  >
+    Agregar
+  </button>
+</template>
+
+<template id="view-purchase-invoice-2">
+  <a class="btn" href="/api/purchase-invoices/{{{id}}}/xml" download
+    >Descargar XML original</a
+  >
+</template>
+
+<template id="view-purchase-invoice-1">
+  {{{purchaseInvoiceContent}}}
+  <p class="form-help">
+    Registro interno del comprobante entregado por el proveedor. Conserva la
+    factura original.
+  </p>
+  <div class="dialog-footer">{{{slot2}}}{{{slot3}}}{{{button}}}</div>
+</template>
+
+<template id="confirm-purchase-payment-1">
+  <p>
+    ¿Ya pagaste la factura <b>{{{esc}}}</b> de {{{esc2}}} por <b>{{{crc}}}</b>?
+  </p>
+  <p class="form-help">
+    Esta opción registra el pago completo; no realiza transferencias bancarias.
+  </p>
+  <p class="error" role="alert"></p>
+  <div class="dialog-footer">
+    {{{button}}}<button
+      type="button"
+      class="btn primary"
+      id="confirm-purchase-payment"
+    >
+      Confirmar pago completo
+    </button>
+  </div>
+</template>

@@ -1,0 +1,34 @@
+<!-- Vistas de inventory. Los marcadores reciben valores escapados o fragmentos de vista. -->
+
+<template id="inventory-page-2">
+  <div class="notice">
+    {{{icon}}} {{{low}}} productos activos necesitan reabastecimiento.
+  </div>
+</template>
+
+<template id="inventory-page-1">
+  {{{head}}}{{{slot2}}}{{{filters}}}
+  <div class="card" id="listing"></div>
+  <section class="card">
+    <div class="card-header">
+      <h2>Movimientos recientes</h2>
+      <small>Últimos 50 movimientos</small>
+    </div>
+    {{{table}}}
+  </section>
+</template>
+
+<template id="inventory-page-3">
+  <strong>{{{esc}}}</strong><small>{{{esc2}}} · {{{esc3}}}</small>
+</template>
+
+<template id="adjust-stock-1">
+  {{{select}}}{{{field}}}
+  <div class="wide">
+    {{{field3}}}
+    <p class="form-help">
+      Las ventas y recepciones de pedidos registran sus movimientos
+      automáticamente.
+    </p>
+  </div>
+</template>

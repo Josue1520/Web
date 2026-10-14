@@ -73,3 +73,14 @@ La barra lateral conserva los azules originales. En móvil se convierte en menú
 La regla existente de compra directa ya incrementaba existencias dentro de la misma transacción que guarda la factura. Se conserva y ahora se registra además un comprobante de movimiento por producto, con saldo anterior, cantidad ingresada, saldo posterior e identificador del movimiento. El detalle presenta ese resultado después de guardar, tanto para XML como para compra manual. No son saldos actuales calculados retroactivamente: permanecen iguales si hay ventas posteriores.
 
 Una factura vinculada a un pedido recibido registra explícitamente ese origen y no repite movimientos. En facturas anteriores a esta ampliación se mantiene el historial disponible, sin inventar saldos históricos. Las pruebas comprueban la entrada, la vinculación sin duplicados, la recuperación desde SQLite y la existencia mostrada en la pantalla de Inventario después de importar y recargar.
+
+
+## Tema Glassmorphism y MVC
+
+La solicitud posterior sustituyó expresamente la paleta azul por una estética oscura. La versión actual usa #090d17 como fondo y #bfa8ff como acento, conserva la navegación lateral y aplica transparencia moderada, bordes suaves, sombras discretas y más separación entre elementos. Las decisiones de navegación e información anteriores siguen vigentes; las referencias a azul y superficies planas documentan la versión previa.
+
+DM Sans y Manrope provienen del [repositorio oficial de Google Fonts](https://github.com/google/fonts), carpetas `ofl/dmsans` y `ofl/manrope`. Los archivos variables y sus licencias OFL se distribuyen en `public/fonts/`: la interfaz no depende de peticiones a Google y no necesita relajar la política CSP.
+
+El CSS del tema está limitado a pantalla. Los tickets mantienen fondo blanco, texto negro y anchos de 80/58 mm; las compras y reportes siguen en A4. Se conserva el foco visible de teclado, se reducen animaciones con `prefers-reduced-motion` y se ofrecen superficies opacas con `prefers-reduced-transparency`. Esto no constituye una certificación de accesibilidad.
+
+La organización y los puntos de edición se explican en [Arquitectura MVC](ARQUITECTURA-MVC.md).
