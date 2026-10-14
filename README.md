@@ -1,6 +1,6 @@
 # SIPRO — Sistema de Gestión de Pedidos a Proveedores
 
-Demostración funcional para un Mini Súper / Licorera, basada en **Proyecto de Sistemas.pdf** y en las pantallas del ZIP original. Incluye siete módulos conectados, datos persistentes y dos roles. Conserva el nombre, los productos iniciales y el cálculo de precios con IVA incluido. La interfaz combina un dashboard comercial claro con las pantallas operativas en tema oscuro Glassmorphism, conservando la barra lateral; el código sigue una organización MVC con plantillas HTML, estilos CSS y módulos JavaScript separados.
+Demostración funcional para un Mini Súper / Licorera, basada en **Proyecto de Sistemas.pdf** y en las pantallas del ZIP original. Incluye siete módulos conectados, datos persistentes y dos roles. Conserva el nombre, los productos iniciales y el cálculo de precios con IVA incluido. Toda la interfaz comparte una paleta azul con fondo gris azulado y barra lateral; el código sigue una organización MVC con plantillas HTML, estilos CSS y módulos JavaScript separados.
 
 ## Ejecutar
 
@@ -74,7 +74,7 @@ La confirmación comprueba otra vez la propuesta dentro de la transacción. Si c
 
 ## Caja, ventas guardadas y tickets
 
-La interfaz usa fondo **#090d17**, acento lavanda **#bfa8ff**, superficies translúcidas, bordes suaves y transiciones discretas. Conserva la barra lateral agrupada y plegable en móvil. La caja prioriza la entrada de artículos y coloca el cliente debajo; el panel de cobro permanece a la derecha en escritorio amplio. Acceso, catálogo, compras, reportes y diálogos comparten el tema. Las fuentes **DM Sans y Manrope** se sirven localmente, con sus licencias: no necesitan conexión a Google. La impresión conserva papel blanco y texto oscuro, independiente del tema. Las [decisiones y fuentes](docs/DISENO-IMPORTACION-XML.md) explican la evolución. Conserva la identidad de SIPRO; no es una integración ni una reproducción oficial de Qupos.
+La interfaz recupera el azul **#1f5a99** y el azul oscuro **#153c66**, con fondo gris azulado **#e5ebf3** y paneles **#f5f7fb**. Usa superficies sólidas, bordes suaves y transiciones discretas. Conserva la barra lateral agrupada y plegable en móvil. La caja prioriza la entrada de artículos y coloca el cliente debajo; el panel de cobro permanece a la derecha en escritorio amplio. Acceso, dashboard, catálogo, compras, reportes y diálogos comparten el tema. Las fuentes **DM Sans y Manrope** se sirven localmente, con sus licencias: no necesitan conexión a Google. La impresión conserva papel blanco y texto oscuro, independiente del tema. Las [referencias SaaS y decisiones visuales](docs/DISENO-SAAS-AZUL.md) explican qué patrones se adaptaron. Conserva la identidad de SIPRO; no es una integración ni una reproducción oficial de Qupos.
 
 ![Pantalla de caja de SIPRO](docs/capturas/caja.png)
 
@@ -199,7 +199,7 @@ public/js/app.js           Arranque de la interfaz
 public/js/models/          Estado del cliente, API y totales provisionales
 public/js/controllers/     Eventos y coordinación de cada módulo
 public/js/views/           Composición, formato y presentación de vistas
-public/styles/             CSS estructural, impresión y tema Glassmorphism
+public/styles/             CSS estructural, impresión y tema azul compartido
 public/fonts/              Tipografías locales y licencias OFL
 tests/                     Pruebas de integración, vistas y navegador
 docs/                      Arquitectura, requisitos y capturas

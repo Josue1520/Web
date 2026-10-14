@@ -25,7 +25,7 @@ El modelo no importa controladores ni vistas. Las operaciones que modifican inve
 | Controlador | `public/js/controllers/` | Leer formularios, atender eventos, llamar al modelo y actualizar la vista. Hay controladores de catálogo, inventario, pedidos, compras, ventas, reportes y usuarios. |
 | Vista HTML | `public/views/` | Estructura de las pantallas, formularios, filas, diálogos y comprobantes. |
 | Presentación JS | `public/js/views/` | Formato de moneda/fechas, composición de componentes, navegación, diálogo, notificaciones e impresión. |
-| Presentación CSS | `public/styles/index.css`, `glass.css`, `dashboard.css` | Distribución e impresión; tema oscuro y estilos locales del dashboard aplicados exclusivamente a pantalla. |
+| Presentación CSS | `public/styles/index.css`, `glass.css`, `dashboard.css` | Distribución e impresión; tema azul global y composición del dashboard aplicados exclusivamente a pantalla. `glass.css` conserva su nombre histórico, pero su contenido actual es el tema azul. |
 
 `public/index.html` contiene el documento inicial, el contenedor de la aplicación, el diálogo y el área de impresión. `public/js/app.js` carga las plantillas y arranca el controlador principal mediante módulos ES. No hay JavaScript ni CSS en línea en las plantillas.
 
@@ -57,7 +57,7 @@ El motor no interpreta expresiones JavaScript ni vuelve a procesar marcadores qu
 ## Guía para modificar
 
 - **Cambiar estructura o texto de una pantalla:** editar su archivo en `public/views/`.
-- **Cambiar colores, transparencia, sombras o transiciones:** editar `public/styles/glass.css`. Está limitado a `screen`; no modifica el papel del ticket.
+- **Cambiar colores, superficies, sombras o transiciones:** editar los tokens y componentes de `public/styles/glass.css`. El dashboard usa esos mismos tokens y conserva su distribución en `dashboard.css`. Ambos están limitados a `screen`; no modifican el papel del ticket.
 - **Cambiar un evento o el proceso de un formulario:** editar el controlador correspondiente en `public/js/controllers/`.
 - **Cambiar las reglas de inventario, impuestos o permisos:** editar el modelo del servidor en `src/models/`. Los cálculos del cliente solo ayudan a presentar el borrador.
 - **Añadir una colección de vistas:** incluirla en `loadTemplates()` de `public/js/app.js` y reiniciar el servidor para actualizar el listado de recursos públicos.

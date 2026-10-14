@@ -1,6 +1,6 @@
 # Diseño e importación de facturas XML
 
-Investigación y decisiones aplicadas el 13 de octubre de 2026.
+Historial de investigación y decisiones desde el 13 de octubre de 2026. El tema vigente se describe en [Diseño SaaS azul](DISENO-SAAS-AZUL.md); las secciones siguientes conservan la evolución de las versiones anteriores.
 
 ## Referencias consultadas
 
@@ -77,7 +77,7 @@ Una factura vinculada a un pedido recibido registra explícitamente ese origen y
 
 ## Tema Glassmorphism y MVC
 
-La solicitud posterior sustituyó expresamente la paleta azul por una estética oscura. La versión actual usa #090d17 como fondo y #bfa8ff como acento, conserva la navegación lateral y aplica transparencia moderada, bordes suaves, sombras discretas y más separación entre elementos. Las decisiones de navegación e información anteriores siguen vigentes; las referencias a azul y superficies planas documentan la versión previa.
+Una solicitud intermedia sustituyó la paleta azul por una estética oscura. Esa versión usó #090d17 como fondo y #bfa8ff como acento, conservó la navegación lateral y aplicó transparencia moderada, bordes suaves y sombras discretas. La solicitud más reciente recupera el azul en todos los módulos, como se documenta en Diseño SaaS azul.
 
 DM Sans y Manrope provienen del [repositorio oficial de Google Fonts](https://github.com/google/fonts), carpetas `ofl/dmsans` y `ofl/manrope`. Los archivos variables y sus licencias OFL se distribuyen en `public/fonts/`: la interfaz no depende de peticiones a Google y no necesita relajar la política CSP.
 
@@ -89,6 +89,6 @@ La organización y los puntos de edición se explican en [Arquitectura MVC](ARQU
 
 El 14 de octubre de 2026 se intentó consultar `qupos.com`, `www.qupos.com`, `ncq.co.cr` y `www.ncq.co.cr` como referencias para la nueva solicitud. El proxy del entorno devolvió 403 en esos accesos; no se pudo verificar su interfaz actual. Esta versión no se presenta como réplica exacta, integración ni diseño oficial de NCQ Qupos.
 
-Se implementó una composición propia de panel comercial: barra lateral azul marino, área de lectura clara, indicadores de calendario, resumen de la selección, gráfico semanal junto a cobros y tablas de artículos. El azul identifica acciones y selección; verde y ámbar distinguen indicadores secundarios sin depender solo del color. La barra lateral mantiene su posición y sus módulos. El tema se limita a Resumen; las pantallas operativas conservan el Glassmorphism solicitado antes.
+Se implementó una composición propia de panel comercial: barra lateral azul marino, área de lectura clara, indicadores de calendario, resumen de la selección, gráfico semanal junto a cobros y tablas de artículos. Inicialmente tuvo un tema independiente de las pantallas operativas. La revisión posterior unifica el tema azul y los fondos gris azulados en todo el sistema, conservando la composición y las funciones del dashboard.
 
 Los filtros tienen etiquetas explícitas y el gráfico se maneja también mediante botones y casillas con teclado. Cada barra ofrece fecha, importe y número de ventas a tecnologías de asistencia. Los estados sin datos muestran ceros reales y explicaciones; no se introducen porcentajes de crecimiento ni tendencias inventadas. Las tarjetas de períodos completos se distinguen del detalle filtrado, y el ranking por proveedor explica las asociaciones compartidas. Las capturas del dashboard usan exclusivamente datos sintéticos de pruebas.
