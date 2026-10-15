@@ -46,3 +46,11 @@ La revisión posterior usa las seis capturas del usuario como referencia visual:
 El Top 10 sustituye el gráfico circular con etiquetas apretadas por una tabla ordenada con barras horizontales, cantidades, importes y porcentajes. Incluye acceso directo, fechas desde/hasta y consulta general o por proveedor. Su rango es independiente de los otros gráficos. Los resultados muestran siempre el rango y proveedor efectivamente consultados, incluso si después se editan los campos.
 
 No se reproducen cifras, metas comerciales ni sucursales de las capturas: las estadísticas corresponden a la instalación de SIPRO. Los totales de ventas del negocio ya se muestran en las tarjetas y el resumen. La utilidad es una estimación con costos históricos, no ganancia neta. Las facturas sin hora o costos completos se identifican sin inventar información.
+
+## Facturación según las fotografías aportadas
+
+La caja toma la distribución de las fotografías de Qupos: barra de acciones, total destacado, entrada por código, tabla de artículos, accesos rápidos a la derecha y una franja de estado inferior. Se conserva la identidad azul de SIPRO. La botonera utiliza el catálogo real, suma una unidad por toque y permite buscar, filtrar por categoría y cambiar de página. Las cantidades se validan contra existencias tanto en la interfaz como en el servidor.
+
+La ventana Pago separa cliente, medio de pago y confirmación. Incluye efectivo, tarjeta y SINPE, teclado numérico, botones que suman denominaciones y monto exacto. Muestra lo que falta por recibir o el vuelto; la factura se guarda antes de abrir su ticket. En móvil los paneles se apilan, la tabla permite desplazamiento horizontal y el diálogo tiene desplazamiento vertical. No se agregan opciones decorativas de crédito, cheque o dólares que el sistema no procese.
+
+[Facturación](capturas/caja.png) · [Pago](capturas/cobro.png)

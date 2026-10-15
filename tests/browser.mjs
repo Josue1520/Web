@@ -28,7 +28,7 @@ mkdirSync("test-results", { recursive: true });
 const dialog = () => page.getByRole("dialog");
 async function navigate(name) {
   const menu = page.locator("#workspace-menu");
-  if (await menu.count() && !(await menu.evaluate((el) => el.open)))
+  if ((await menu.count()) && !(await menu.evaluate((el) => el.open)))
     await menu.locator("summary").click();
   await page
     .getByRole("navigation")
@@ -137,8 +137,12 @@ try {
     .fill("BROWSER-P01");
   await page.getByLabel("Código de producto / lector de barras").press("Enter");
   await page.getByLabel("Descuento (%)", { exact: true }).fill("10");
-  await page.getByLabel("Efectivo recibido (₡)", { exact: true }).fill("2000");
+  await page.locator("#toast:not(.show)").waitFor({ state: "attached" });
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: "test-results/caja-pos.png", fullPage: true });
+  await page.getByRole("button", { name: "Cobrar venta" }).click();
+  await page.getByLabel("Efectivo recibido (₡)", { exact: true }).fill("2000");
+  await page.screenshot({ path: "test-results/cobro-pos.png" });
   await page.getByRole("button", { name: "Emitir factura" }).click();
   await dialog().getByRole("heading", { name: "FAC-00001" }).waitFor();
   const state = await page.evaluate(
@@ -382,7 +386,10 @@ try {
     ),
   );
   await navigate("Resumen");
-  assert.equal(await page.locator("#workspace-menu").evaluate((el) => el.open), false);
+  assert.equal(
+    await page.locator("#workspace-menu").evaluate((el) => el.open),
+    false,
+  );
   await page.screenshot({ path: "test-results/movil.png", fullPage: true });
   assert.ok(
     await page.evaluate(

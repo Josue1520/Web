@@ -1,3 +1,4 @@
+import { checkoutSale } from "./sales-checkout.js";
 import { saleTotals } from "../models/financial-model.js";
 import {
   $,
@@ -8,7 +9,6 @@ import {
   field,
   filters,
   head,
-  icon,
   idLabel,
   select,
   statusBadge,
@@ -24,153 +24,149 @@ import {
   model,
   receiptWidth,
 } from "../models/app-model.js";
-import { reload } from "./application.js";
 import { openDialog, toast } from "../views/feedback.js";
 import { attachFilter, editForm } from "./forms.js";
 
 export function invoicesPage() {
+  const products = model.state.products.filter((p) => p.active && p.stock > 0);
   $("#content").innerHTML = view("invoices-page-1", {
     head: head(
       "Facturación",
       "Punto de venta · Caja principal",
       button("Ver historial", "invoice-history"),
     ),
-    field: field(
-      "customer",
-      "Nombre del cliente",
-      model.saleDraft.customer,
-      "text",
-      "required",
-    ),
-    field3: field(
-      "identification",
-      "Identificación (opcional)",
-      model.saleDraft.identification,
-    ),
-    field4: field("notes", "Observaciones", model.saleDraft.notes),
-    button: button("Vaciar", "clear-sale", "", "small"),
-    field6: field(
+    barcode: field(
       "barcode",
       "Código de producto / lector de barras",
       "",
       "text",
-      'autocomplete="off" placeholder="Escanea o digita el código y presiona Enter"',
+      'autocomplete="off" placeholder="Escanea el código y presiona Enter"',
     ),
-    select: select(
+    product: select(
       "productId",
       "Buscar producto",
-      model.state.products
-        .filter((p) => p.active && p.stock > 0)
-        .map((p) => [p.id, `${p.code} · ${p.name} · ${crc(p.price)}`]),
+      products.map((p) => [p.id, `${p.code} · ${p.name} · ${crc(p.price)}`]),
     ),
-    field8: field("qty", "Cantidad", 1, "number", 'min="1" step="1"'),
-    field9: field(
+    quantity: field("qty", "Cantidad", 1, "number", 'min="1" step="1"'),
+    discount: field(
       "discount",
       "Descuento (%)",
       model.saleDraft.discount,
       "number",
       'required min="0" max="100" step="0.01"',
     ),
-    select10: select(
-      "payment",
-      "Medio de pago",
-      ["Efectivo", "Tarjeta", "SINPE"],
-      model.saleDraft.payment,
-    ),
-    field11: field(
-      "paid",
-      "Efectivo recibido (₡)",
-      model.saleDraft.paid,
-      "number",
-      'min="0" step="0.01"',
-    ),
-    icon: icon("arrow"),
+    category: select("quickCategory", "Categoría", [
+      ["", "Todas las categorías"],
+      ...[...new Set(products.map((p) => p.category).filter(Boolean))].sort(),
+    ]),
   });
   const form = $("#sale-form");
+  let quickPage = 0;
+  function paintQuick() {
+    const list = products.filter(
+      (p) =>
+        matches($("#quick-search").value, p.name, p.code) &&
+        (!$('[name="quickCategory"]').value ||
+          p.category === $('[name="quickCategory"]').value),
+    );
+    const pages = Math.max(1, Math.ceil(list.length / 12));
+    quickPage = Math.min(quickPage, pages - 1);
+    $("#quick-products").innerHTML =
+      list
+        .slice(quickPage * 12, (quickPage + 1) * 12)
+        .map((p) =>
+          view("pos-quick-product", {
+            id: p.id,
+            name: esc(p.name),
+            code: esc(p.code),
+            price: crc(p.price),
+            stock:
+              p.stock -
+              (model.cart.find((l) => l.productId === p.id)?.qty || 0),
+          }),
+        )
+        .join("") ||
+      '<p class="form-help">No hay artículos disponibles con ese filtro.</p>';
+    $("#quick-page").textContent = `${quickPage + 1} / ${pages}`;
+    $("#quick-prev").disabled = quickPage === 0;
+    $("#quick-next").disabled = quickPage + 1 >= pages;
+  }
+  function paintTotals() {
+    const t = saleTotals();
+    $("#pos-total").textContent = crc(t.total);
+    $("#pos-units").textContent =
+      `${model.cart.reduce((sum, l) => sum + l.qty, 0)} unidades · ${model.cart.length} artículos`;
+    $("#sale-totals").innerHTML = view("pos-totals", {
+      gross: crc(t.gross),
+      discount: crc(t.discount),
+      net: crc(t.net),
+      vat: crc(t.vat),
+    });
+    $("#open-checkout").disabled = !model.cart.length;
+  }
   function paintCart() {
     $("#cart-table").innerHTML = table(
-      ["Producto", "Cantidad", "Precio", "Total", ""],
+      ["Código", "Artículo", "Cantidad", "Precio con IVA", "Importe", ""],
       model.cart.map((l, i) => {
         const p = model.state.products.find((p) => p.id === l.productId);
         return tr([
+          esc(p.code),
           view("invoices-page-2", {
             esc: esc(p.name),
-            esc2: esc(p.code),
+            esc2: esc(p.presentation || "Unidad"),
             stock: p.stock,
           }),
           view("invoices-page-3", {
             stock: p.stock,
             qty: l.qty,
-            i: i,
+            i,
             esc: esc(p.name),
           }),
           crc(p.price),
           crc(p.price * l.qty),
-          view("invoices-page-4", { i: i, esc: esc(p.name) }),
+          view("invoices-page-4", { i, esc: esc(p.name) }),
         ]);
       }),
-      "Agrega productos para comenzar la venta.",
+      "Escanea un código o selecciona un artículo de los accesos rápidos.",
     );
     paintTotals();
+    paintQuick();
   }
-  function paintTotals() {
-    const t = saleTotals();
-    $("#sale-totals").innerHTML = view("invoices-page-5", {
-      crc: crc(t.gross),
-      crc2: crc(t.discount),
-      crc3: crc(t.net),
-      crc4: crc(t.vat),
-      crc5: crc(t.total),
-      slot6:
-        model.saleDraft.payment === "Efectivo"
-          ? view("invoices-page-6", {
-              crc: crc(Math.max(0, Number(model.saleDraft.paid) - t.total)),
-            })
-          : "",
-    });
-    $("#cash-field").hidden = model.saleDraft.payment !== "Efectivo";
-    $('[name="paid"]').required = model.saleDraft.payment === "Efectivo";
-    $("#issue-invoice").disabled = !model.cart.length;
-  }
-  form.addEventListener("input", (e) => {
-    if (e.target.name in model.saleDraft) {
-      model.saleDraft[e.target.name] = e.target.value;
-      paintTotals();
-    }
-  });
-  $("#add-sale-line").onclick = () => {
-    const p = model.state.products.find(
-      (p) => p.id === Number($('[name="productId"]', form).value),
-    );
-    const qty = Number($('[name="qty"]', form).value),
-      old = model.cart.find((l) => l.productId === p?.id);
+  function addProduct(id, qty) {
+    const p = products.find((p) => p.id === Number(id));
+    const old = model.cart.find((l) => l.productId === p?.id);
     if (
       !p ||
       !Number.isSafeInteger(qty) ||
       qty < 1 ||
-      qty + (old?.qty ?? 0) > p.stock
-    )
-      return ($(".error", form).textContent =
-        "Revisa el producto, la cantidad y la existencia disponible.");
+      qty + (old?.qty || 0) > p.stock
+    ) {
+      $(".error", form).textContent =
+        "Revisa la cantidad y la existencia disponible.";
+      return false;
+    }
     if (old) old.qty += qty;
     else model.cart.push({ productId: p.id, qty });
     $(".error", form).textContent = "";
+    $("#pos-last-item").textContent =
+      `${p.name} · ${qty} × ${crc(p.price)} · Existencia: ${p.stock}`;
     paintCart();
-  };
-  function scanProduct() {
-    const code = $('[name="barcode"]', form).value.trim();
-    const product = model.state.products.find(
-      (p) => p.code === code && p.active && p.stock > 0,
+    return true;
+  }
+  $("#add-sale-line").onclick = () =>
+    addProduct(
+      $('[name="productId"]', form).value,
+      Number($('[name="qty"]', form).value),
     );
-    if (!product) {
+  function scanProduct() {
+    const input = $('[name="barcode"]', form);
+    const p = products.find((p) => p.code === input.value.trim());
+    if (!p)
       $(".error", form).textContent =
         "Código no encontrado o producto sin existencias.";
-      return;
-    }
-    $('[name="productId"]', form).value = product.id;
-    $("#add-sale-line").click();
-    if (!$(".error", form).textContent) $('[name="barcode"]', form).value = "";
-    $('[name="barcode"]', form).focus();
+    else if (addProduct(p.id, Number($('[name="qty"]', form).value)))
+      input.value = "";
+    input.focus();
   }
   $("#scan-product").onclick = scanProduct;
   $('[name="barcode"]', form).onkeydown = (e) => {
@@ -179,47 +175,56 @@ export function invoicesPage() {
       scanProduct();
     }
   };
-  $("#cart-table").onchange = (e) => {
-    if (e.target.dataset.saleLine !== undefined) {
-      const i = Number(e.target.dataset.saleLine),
-        qty = Number(e.target.value);
-      if (Number.isSafeInteger(qty) && qty > 0) model.cart[i].qty = qty;
-      paintCart();
+  $('[name="discount"]', form).oninput = (e) => {
+    if (e.target.validity.valid) {
+      model.saleDraft.discount = e.target.value;
+      paintTotals();
     }
+  };
+  $("#cart-table").onchange = (e) => {
+    if (e.target.dataset.saleLine === undefined) return;
+    const l = model.cart[Number(e.target.dataset.saleLine)];
+    const p = model.state.products.find((p) => p.id === l.productId);
+    const qty = Number(e.target.value);
+    if (Number.isSafeInteger(qty) && qty > 0 && qty <= p.stock) {
+      l.qty = qty;
+      $(".error", form).textContent = "";
+    } else
+      $(".error", form).textContent =
+        `La cantidad debe estar entre 1 y ${p.stock}.`;
+    paintCart();
   };
   $("#cart-table").onclick = (e) => {
     const b = e.target.closest("[data-remove-sale]");
     if (b) {
       model.cart.splice(Number(b.dataset.removeSale), 1);
+      $("#pos-last-item").textContent = "Artículo retirado de la venta.";
       paintCart();
     }
   };
-  form.onsubmit = async (e) => {
+  $("#quick-products").onclick = (e) => {
+    const b = e.target.closest("[data-quick-product]");
+    if (b) addProduct(b.dataset.quickProduct, 1);
+  };
+  $("#quick-search").oninput = () => {
+    quickPage = 0;
+    paintQuick();
+  };
+  $('[name="quickCategory"]').onchange = () => {
+    quickPage = 0;
+    paintQuick();
+  };
+  $("#quick-prev").onclick = () => {
+    quickPage--;
+    paintQuick();
+  };
+  $("#quick-next").onclick = () => {
+    quickPage++;
+    paintQuick();
+  };
+  form.onsubmit = (e) => {
     e.preventDefault();
-    const btn = $("#issue-invoice");
-    btn.disabled = true;
-    try {
-      const invoice = await api("invoices", "POST", {
-        ...model.saleDraft,
-        items: model.cart,
-      });
-      model.cart = [];
-      model.saleDraft = {
-        customer: "Consumidor final",
-        identification: "",
-        discount: "0",
-        payment: "Efectivo",
-        paid: "",
-        notes: "",
-      };
-      await reload();
-      viewInvoice(invoice.id);
-      toast("Factura guardada e inventario actualizado.");
-    } catch (error) {
-      if ($("#sale-form .error"))
-        $("#sale-form .error").textContent = error.message;
-      btn.disabled = false;
-    }
+    checkoutSale();
   };
   paintCart();
 }

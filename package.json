@@ -11,7 +11,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node --test tests/*.test.js",
-    "test:browser": "node tests/browser.mjs && node tests/browser-xml.mjs && node tests/browser-recommendations.mjs && node tests/browser-dashboard.mjs"
+    "test:browser": "node tests/browser.mjs && node tests/browser-xml.mjs && node tests/browser-recommendations.mjs && node tests/browser-dashboard.mjs && node tests/browser-pos.mjs"
   },
   "devDependencies": {
     "playwright": "1.57.0"

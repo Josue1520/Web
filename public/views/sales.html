@@ -2,38 +2,40 @@
 
 <template id="invoices-page-1">
   {{{head}}}
-  <div class="pos-toolbar">
-    <button type="button" class="btn" data-action="focus-code">
-      <kbd>F2</kbd> Ingresar código</button
-    ><button type="button" class="btn" data-action="focus-product">
-      <kbd>F4</kbd> Buscar artículo</button
-    ><button type="button" class="btn" data-action="invoice-history">
-      <kbd>F8</kbd> Facturas guardadas</button
-    ><button type="button" class="btn" data-action="focus-payment">
-      <kbd>F9</kbd> Cobrar</button
-    ><a class="btn" href="#sales-history">Ventas guardadas →</a>
-  </div>
-  <form id="sale-form">
-    <div class="sale-layout">
-      <div class="sale-workspace">
-        <section class="card sale-customer">
-          <div class="card-header">
-            <h2>Datos del cliente</h2>
-            <span class="badge">Nueva factura</span>
-          </div>
-          <div class="card-body form-grid">
-            {{{field}}}{{{field3}}}
-            <div class="wide">{{{field4}}}</div>
-          </div>
-        </section>
-        <section class="card sale-items">
-          <div class="card-header">
-            <h2>Detalle de artículos</h2>
-            {{{button}}}
-          </div>
-          <div class="card-body">
-            <div class="pos-scan">
-              {{{field6}}}<button
+  <section class="pos-terminal" aria-label="Venta en curso">
+    <div class="pos-commandbar">
+      <button type="button" class="btn primary" data-action="focus-payment">
+        <kbd>F9</kbd> Cobrar
+      </button>
+      <button type="button" class="btn" data-action="focus-code">
+        <kbd>F2</kbd> Ingresar código
+      </button>
+      <button type="button" class="btn" data-action="focus-product">
+        <kbd>F4</kbd> Buscar artículo
+      </button>
+      <button type="button" class="btn" data-action="invoice-history">
+        <kbd>F8</kbd> Historial
+      </button>
+      <button type="button" class="btn" data-action="clear-sale">
+        Vaciar venta
+      </button>
+    </div>
+    <form id="sale-form">
+      <div class="pos-counter">
+        <div class="pos-total-display">
+          <span>Total a cobrar</span
+          ><strong id="pos-total" aria-live="polite"></strong
+          ><small id="pos-units"></small>
+        </div>
+        <div class="pos-counter-discount">
+          {{{discount}}}<span class="form-help">Precios con IVA incluido</span>
+        </div>
+      </div>
+      <div class="pos-register">
+        <div class="pos-invoice">
+          <div class="pos-entry">
+            <div class="pos-code-row">
+              {{{barcode}}}<button
                 type="button"
                 class="btn primary"
                 id="scan-product"
@@ -41,42 +43,144 @@
                 Ingresar código
               </button>
             </div>
-            <div class="line-add">
-              {{{select}}}{{{field8}}}<button
+            <div class="pos-product-row">
+              {{{product}}}{{{quantity}}}<button
                 id="add-sale-line"
                 type="button"
-                class="btn primary"
+                class="btn"
               >
                 Agregar
               </button>
             </div>
-            <p class="form-help">
-              Los precios incluyen el IVA configurado para cada producto.
-            </p>
           </div>
+          <p class="error pos-error" role="alert"></p>
           <div id="cart-table"></div>
-        </section>
-      </div>
-      <aside class="card sale-summary">
-        <div class="card-header"><h2>Cobro de la venta</h2></div>
-        <div class="card-body">
-          <div class="stack-gap">
-            {{{field9}}}{{{select10}}}
-            <div id="cash-field">{{{field11}}}</div>
+          <div id="sale-totals" class="pos-totals"></div>
+          <div class="pos-invoice-footer">
+            <span>Revisa los artículos antes de cobrar.</span
+            ><button type="submit" class="btn primary" id="open-checkout">
+              Cobrar venta · F9
+            </button>
           </div>
-          <div id="sale-totals"></div>
-          <p class="error" role="alert"></p>
-          <button type="submit" class="btn primary block" id="issue-invoice">
-            Emitir factura · F10 {{{icon}}}
-          </button>
-          <p class="form-help">
-            La venta se guarda antes de imprimir el ticket.
-          </p>
         </div>
-      </aside>
+        <aside class="pos-catalog" aria-label="Accesos rápidos">
+          <div class="pos-catalog-title">
+            <h2>Accesos rápidos</h2>
+            <span>+1 unidad por toque</span>
+          </div>
+          <label class="field"
+            >Filtrar artículos<input
+              id="quick-search"
+              type="search"
+              placeholder="Nombre o código"
+              autocomplete="off"
+          /></label>
+          {{{category}}}
+          <div id="quick-products" class="pos-product-grid"></div>
+          <div class="pos-pagination">
+            <button
+              id="quick-prev"
+              type="button"
+              class="btn"
+              aria-label="Productos anteriores"
+            >
+              ←</button
+            ><span id="quick-page"></span
+            ><button
+              id="quick-next"
+              type="button"
+              class="btn"
+              aria-label="Productos siguientes"
+            >
+              →
+            </button>
+          </div>
+        </aside>
+      </div>
+      <div class="pos-status" id="pos-last-item" role="status">
+        Caja lista · Ingresa el primer artículo para comenzar.
+      </div>
+    </form>
+  </section>
+</template>
+
+<template id="pos-quick-product">
+  <button type="button" class="pos-product" data-quick-product="{{{id}}}">
+    <small>{{{code}}}</small><strong>{{{name}}}</strong><b>{{{price}}}</b
+    ><span>{{{stock}}} disponibles para agregar</span>
+  </button>
+</template>
+
+<template id="pos-totals">
+  <div><span>Importe con IVA</span><b>{{{gross}}}</b></div>
+  <div><span>Descuento</span><b>− {{{discount}}}</b></div>
+  <div><span>Subtotal sin IVA</span><b>{{{net}}}</b></div>
+  <div><span>IVA</span><b>{{{vat}}}</b></div>
+</template>
+
+<template id="pos-checkout">
+  <form id="checkout-form" class="pos-checkout">
+    <div class="pos-payment-methods" role="group" aria-label="Medio de pago">
+      <button type="button" class="btn" data-payment="Efectivo">Efectivo</button
+      ><button type="button" class="btn" data-payment="Tarjeta">Tarjeta</button
+      ><button type="button" class="btn" data-payment="SINPE">SINPE</button>
+    </div>
+    <div class="pos-customer-fields">
+      {{{customer}}}{{{identification}}}{{{notes}}}
+    </div>
+    <div class="pos-payment-body">
+      <section class="pos-payment-amounts" aria-label="Resumen del cobro">
+        <p id="payment-label"></p>
+        <span>Total a pagar</span
+        ><strong class="pos-payment-total">{{{total}}}</strong>
+        <div id="cash-field">
+          {{{paid}}}
+          <div class="pos-change">
+            <span id="change-label">Vuelto</span
+            ><strong id="change-amount" aria-live="polite"></strong>
+          </div>
+        </div>
+        <p id="electronic-payment" class="form-help" hidden>
+          Confirma que recibiste el pago antes de emitir la factura.
+        </p>
+        <p class="pos-ticket-note">
+          Ticket de {{{width}}} mm · Podrás imprimirlo al guardar.
+        </p>
+      </section>
+      <fieldset class="pos-keyboard" id="cash-keyboard">
+        <legend>Ingresar efectivo</legend>
+        <div class="pos-keypad">{{{keys}}}</div>
+        <div class="pos-denominations">{{{denominations}}}</div>
+        <button type="button" class="btn block" id="exact-cash">
+          Monto exacto
+        </button>
+      </fieldset>
+    </div>
+    <p class="error" role="alert"></p>
+    <div class="pos-checkout-footer">
+      <button type="button" class="btn" data-action="close">
+        Volver a la venta</button
+      ><button type="submit" class="btn primary" id="issue-invoice">
+        Emitir factura · F10
+      </button>
     </div>
   </form>
 </template>
+<template id="pos-cash-key"
+  ><button
+    type="button"
+    class="btn"
+    data-cash-key="{{{key}}}"
+    aria-label="{{{label}}}"
+  >
+    {{{label}}}
+  </button></template
+>
+<template id="pos-cash-denomination"
+  ><button type="button" class="btn" data-cash-add="{{{value}}}">
+    + {{{label}}}
+  </button></template
+>
 
 <template id="invoices-page-2">
   <strong>{{{esc}}}</strong><small>{{{esc2}}} · {{{stock}}} disponibles</small>

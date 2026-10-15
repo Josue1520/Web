@@ -1,3 +1,4 @@
+import { checkoutSale } from "./sales-checkout.js";
 import { api, isAdmin, model } from "../models/app-model.js";
 import { login } from "./auth.js";
 import { modules } from "../config.js";
@@ -92,12 +93,7 @@ export async function dispatch(action, id, element) {
   if (action === "close") return $("#modal").close();
   if (action === "focus-code") return $('[name="barcode"]')?.focus();
   if (action === "focus-product") return $('[name="productId"]')?.focus();
-  if (action === "focus-payment")
-    return (
-      $('[name="paid"]:not(:disabled)')?.closest("[hidden]")
-        ? $('[name="payment"]')
-        : $('[name="paid"]')
-    )?.focus();
+  if (action === "focus-payment") return checkoutSale();
   if (action === "logout") {
     await api("logout", "POST");
     model.state = null;
@@ -247,7 +243,7 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     dispatch(actions[e.key]).catch((error) => toast(error.message, true));
   }
-  if (e.key === "F10" && !$("#issue-invoice")?.disabled) {
+  if (e.key === "F10" && !$("#open-checkout")?.disabled) {
     e.preventDefault();
     $("#sale-form")?.requestSubmit();
   }

@@ -25,7 +25,7 @@ El modelo no importa controladores ni vistas. Las operaciones que modifican inve
 | Controlador | `public/js/controllers/` | Leer formularios, atender eventos, llamar al modelo y actualizar la vista. Hay controladores de catálogo, inventario, pedidos, compras, ventas, reportes y usuarios. |
 | Vista HTML | `public/views/` | Estructura de las pantallas, formularios, filas, diálogos y comprobantes. |
 | Presentación JS | `public/js/views/` | Formato de moneda/fechas, composición de componentes, navegación, diálogo, notificaciones e impresión. |
-| Presentación CSS | `public/styles/index.css`, `glass.css`, `dashboard.css` | Distribución e impresión; tema azul global y composición del dashboard aplicados exclusivamente a pantalla. `glass.css` conserva su nombre histórico, pero su contenido actual es el tema azul. |
+| Presentación CSS | `public/styles/index.css`, `glass.css`, `dashboard.css`, `pos.css` | Distribución e impresión; tema azul global y composición del dashboard aplicados exclusivamente a pantalla. `glass.css` conserva su nombre histórico, pero su contenido actual es el tema azul. |
 
 `public/index.html` contiene el documento inicial, el contenedor de la aplicación, el diálogo y el área de impresión. `public/js/app.js` carga las plantillas y arranca el controlador principal mediante módulos ES. No hay JavaScript ni CSS en línea en las plantillas.
 
@@ -90,3 +90,9 @@ El modelo `src/models/dashboard.js` agrega importes en centavos, incluye IVA y d
 `public/js/views/dashboard-charts.js` compone gráficos SVG accesibles con tablas de datos alternativas. Los valores nulos interrumpen la línea en lugar de inventar ceros; se contemplan utilidades negativas. La estructura está en `public/views/dashboard.html`; `dashboard.css` distribuye los paneles y usa los colores del tema global. No se agregan bibliotecas ni código en línea. El lector de plantillas permite saltos de línea en las etiquetas de apertura y cierre de `template`.
 
 `tests/dashboard.test.js` verifica rangos, límites de calendario, permisos de utilidad, horas de Costa Rica, facturas sin hora, ranking compartido, diez filas y denominadores. `tests/browser-dashboard.mjs` comprueba filtros independientes, errores, estados vacíos, gráficos, móvil y respuestas concurrentes de ambas consultas. Las bases de pruebas son temporales.
+
+## Caja y cobro
+
+`controllers/sales.js` coordina el escaneo, las líneas de venta y la botonera paginada de productos. `controllers/sales-checkout.js` gestiona la ventana Pago, la entrada por teclado, los botones de efectivo y el envío de la factura. Ambos usan el borrador de `models/app-model.js` y los totales provisionales de `models/financial-model.js`; el servidor sigue validando precios, impuestos y existencias al guardar. La estructura está en `views/sales.html` y la presentación específica en `styles/pos.css`, aplicada solo a pantalla.
+
+Durante la confirmación se bloquean los controles y el cierre del diálogo para impedir otro envío desde la misma caja. Tras una respuesta de guardado exitosa se vacía el borrador antes de refrescar los datos. El ticket y el historial conservan sus controladores y plantillas existentes. Las pruebas de `tests/browser-pos.mjs` usan una base temporal y comprueban cantidades, filtros, efectivo insuficiente, vuelto, tarjeta/SINPE, doble pulsación y móvil.
