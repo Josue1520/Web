@@ -63,52 +63,12 @@
             </button>
           </div>
         </div>
-        <aside class="pos-catalog" aria-label="Accesos rápidos">
-          <div class="pos-catalog-title">
-            <h2>Accesos rápidos</h2>
-            <span>+1 unidad por toque</span>
-          </div>
-          <label class="field"
-            >Filtrar artículos<input
-              id="quick-search"
-              type="search"
-              placeholder="Nombre o código"
-              autocomplete="off"
-          /></label>
-          {{{category}}}
-          <div id="quick-products" class="pos-product-grid"></div>
-          <div class="pos-pagination">
-            <button
-              id="quick-prev"
-              type="button"
-              class="btn"
-              aria-label="Productos anteriores"
-            >
-              ←</button
-            ><span id="quick-page"></span
-            ><button
-              id="quick-next"
-              type="button"
-              class="btn"
-              aria-label="Productos siguientes"
-            >
-              →
-            </button>
-          </div>
-        </aside>
       </div>
       <div class="pos-status" id="pos-last-item" role="status">
         Caja lista · Ingresa el primer artículo para comenzar.
       </div>
     </form>
   </section>
-</template>
-
-<template id="pos-quick-product">
-  <button type="button" class="pos-product" data-quick-product="{{{id}}}">
-    <small>{{{code}}}</small><strong>{{{name}}}</strong><b>{{{price}}}</b
-    ><span>{{{stock}}} disponibles para agregar</span>
-  </button>
 </template>
 
 <template id="pos-totals">
@@ -147,14 +107,6 @@
           Ticket de {{{width}}} mm · Podrás imprimirlo al guardar.
         </p>
       </section>
-      <fieldset class="pos-keyboard" id="cash-keyboard">
-        <legend>Ingresar efectivo</legend>
-        <div class="pos-keypad">{{{keys}}}</div>
-        <div class="pos-denominations">{{{denominations}}}</div>
-        <button type="button" class="btn block" id="exact-cash">
-          Monto exacto
-        </button>
-      </fieldset>
     </div>
     <p class="error" role="alert"></p>
     <div class="pos-checkout-footer">
@@ -166,22 +118,6 @@
     </div>
   </form>
 </template>
-<template id="pos-cash-key"
-  ><button
-    type="button"
-    class="btn"
-    data-cash-key="{{{key}}}"
-    aria-label="{{{label}}}"
-  >
-    {{{label}}}
-  </button></template
->
-<template id="pos-cash-denomination"
-  ><button type="button" class="btn" data-cash-add="{{{value}}}">
-    + {{{label}}}
-  </button></template
->
-
 <template id="invoices-page-2">
   <strong>{{{esc}}}</strong><small>{{{esc2}}} · {{{stock}}} disponibles</small>
 </template>

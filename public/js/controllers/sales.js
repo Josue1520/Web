@@ -55,42 +55,8 @@ export function invoicesPage() {
       "number",
       'required min="0" max="100" step="0.01"',
     ),
-    category: select("quickCategory", "Categoría", [
-      ["", "Todas las categorías"],
-      ...[...new Set(products.map((p) => p.category).filter(Boolean))].sort(),
-    ]),
   });
   const form = $("#sale-form");
-  let quickPage = 0;
-  function paintQuick() {
-    const list = products.filter(
-      (p) =>
-        matches($("#quick-search").value, p.name, p.code) &&
-        (!$('[name="quickCategory"]').value ||
-          p.category === $('[name="quickCategory"]').value),
-    );
-    const pages = Math.max(1, Math.ceil(list.length / 12));
-    quickPage = Math.min(quickPage, pages - 1);
-    $("#quick-products").innerHTML =
-      list
-        .slice(quickPage * 12, (quickPage + 1) * 12)
-        .map((p) =>
-          view("pos-quick-product", {
-            id: p.id,
-            name: esc(p.name),
-            code: esc(p.code),
-            price: crc(p.price),
-            stock:
-              p.stock -
-              (model.cart.find((l) => l.productId === p.id)?.qty || 0),
-          }),
-        )
-        .join("") ||
-      '<p class="form-help">No hay artículos disponibles con ese filtro.</p>';
-    $("#quick-page").textContent = `${quickPage + 1} / ${pages}`;
-    $("#quick-prev").disabled = quickPage === 0;
-    $("#quick-next").disabled = quickPage + 1 >= pages;
-  }
   function paintTotals() {
     const t = saleTotals();
     $("#pos-total").textContent = crc(t.total);
@@ -127,10 +93,9 @@ export function invoicesPage() {
           view("invoices-page-4", { i, esc: esc(p.name) }),
         ]);
       }),
-      "Escanea un código o selecciona un artículo de los accesos rápidos.",
+      "Escanea un código o busca un artículo en el catálogo.",
     );
     paintTotals();
-    paintQuick();
   }
   function addProduct(id, qty) {
     const p = products.find((p) => p.id === Number(id));
@@ -201,26 +166,6 @@ export function invoicesPage() {
       $("#pos-last-item").textContent = "Artículo retirado de la venta.";
       paintCart();
     }
-  };
-  $("#quick-products").onclick = (e) => {
-    const b = e.target.closest("[data-quick-product]");
-    if (b) addProduct(b.dataset.quickProduct, 1);
-  };
-  $("#quick-search").oninput = () => {
-    quickPage = 0;
-    paintQuick();
-  };
-  $('[name="quickCategory"]').onchange = () => {
-    quickPage = 0;
-    paintQuick();
-  };
-  $("#quick-prev").onclick = () => {
-    quickPage--;
-    paintQuick();
-  };
-  $("#quick-next").onclick = () => {
-    quickPage++;
-    paintQuick();
   };
   form.onsubmit = (e) => {
     e.preventDefault();

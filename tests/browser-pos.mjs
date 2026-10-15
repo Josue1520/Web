@@ -13,13 +13,6 @@ store.change((s) => {
   s.products[0].price = 1000;
   s.products[0].tax = 13;
   s.products[0].category = "Prueba";
-  for (let i = 0; i < 15; i++)
-    s.products.push({
-      ...s.products[0],
-      id: 100 + i,
-      code: `POS-${i}`,
-      name: `Artículo rápido ${i}`,
-    });
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const browser = await chromium.launch({
@@ -37,7 +30,10 @@ const modal = page.getByRole("dialog");
 const cash = modal.getByLabel("Efectivo recibido (₡)", { exact: true });
 const state = () =>
   page.evaluate(async () => (await fetch("/api/state")).json());
-const quick = page.locator('[data-quick-product="1"]');
+const addArticle = async () => {
+  await page.getByLabel("Buscar producto", { exact: true }).selectOption("1");
+  await page.getByRole("button", { name: "Agregar", exact: true }).click();
+};
 const close = () =>
   modal.getByRole("button", { name: "Cerrar", exact: true }).click();
 const open = () => page.keyboard.press("F9");
@@ -50,12 +46,11 @@ try {
   await page.locator("#sale-form").waitFor();
   await open();
   assert.equal(await modal.isVisible(), false, "No abre un cobro vacío");
-  await page.getByRole("button", { name: "Productos siguientes" }).click();
-  assert.match(await page.locator("#quick-page").innerText(), /^2 /);
-  await page.getByLabel("Filtrar artículos").fill("<especial>");
-  assert.equal(await page.locator("[data-quick-product]").count(), 1);
-  await quick.click();
-  await quick.click();
+  await addArticle();
+  await page
+    .getByLabel("Código de producto / lector de barras")
+    .fill("74010020");
+  await page.getByLabel("Código de producto / lector de barras").press("Enter");
   const qty = page.getByLabel("Cantidad de Artículo <especial> & prueba", {
     exact: true,
   });
@@ -75,13 +70,6 @@ try {
   });
   await open();
   await modal.getByLabel("Nombre del cliente").fill("Cliente de prueba");
-  for (const digit of ["1", "8", "0", "0"])
-    await modal.getByRole("button", { name: digit, exact: true }).click();
-  await modal.getByRole("button", { name: "Decimal", exact: true }).click();
-  await modal.getByRole("button", { name: "5", exact: true }).click();
-  assert.equal(await cash.inputValue(), "1800.5");
-  await modal.getByRole("button", { name: "Borrar", exact: true }).click();
-  assert.equal(await cash.inputValue(), "1800");
   await cash.fill("1000");
   await modal.getByRole("button", { name: "Emitir factura" }).click();
   assert.equal((await state()).invoices.length, 0);
@@ -93,7 +81,7 @@ try {
     "Cliente de prueba",
   );
   assert.equal(await cash.inputValue(), "1000");
-  await modal.locator('[data-cash-add="1000"]').click();
+  await cash.fill("2000");
   assert.equal(await cash.inputValue(), "2000");
   await page.screenshot({ path: "test-results/pos-cobro.png" });
   // Una respuesta lenta no permite doble envío ni cerrar y abrir otro cobro.
@@ -117,11 +105,10 @@ try {
   await close();
   await page.unroute("**/api/invoices");
   for (const [index, payment] of ["Tarjeta", "SINPE"].entries()) {
-    await quick.click();
+    await addArticle();
     await open();
     await modal.getByRole("button", { name: payment, exact: true }).click();
     assert.equal(await cash.isVisible(), false);
-    assert.equal(await modal.locator("#cash-keyboard").isVisible(), false);
     await modal.getByRole("button", { name: "Emitir factura" }).click();
     await modal
       .getByRole("heading", { name: `FAC-0000${index + 2}` })
@@ -134,7 +121,7 @@ try {
   }
   assert.equal((await state()).products[0].stock, 16);
   await page.setViewportSize({ width: 390, height: 844 });
-  await quick.click();
+  await addArticle();
   await page.evaluate(() => window.scrollTo(0, 0));
   assert.ok(
     await page.evaluate(
@@ -143,9 +130,7 @@ try {
   );
   await page.screenshot({ path: "test-results/pos-movil.png", fullPage: true });
   await open();
-  await modal
-    .getByRole("button", { name: "Monto exacto", exact: true })
-    .click();
+  await cash.fill("1000");
   assert.equal(await cash.inputValue(), "1000");
   assert.ok(await modal.evaluate((el) => el.scrollWidth <= el.clientWidth));
   await page.screenshot({ path: "test-results/pos-cobro-movil.png" });
@@ -157,7 +142,7 @@ try {
   assert.equal(snapshot.products[0].stock, 16);
   assert.deepEqual(errors, []);
   console.log(
-    "POS: escaneo y botonera, existencias, filtros, cobro, teclado, efectivo/tarjeta/SINPE, envío único y móvil OK.",
+    "POS: escaneo y catálogo, existencias, cobro directo, efectivo/tarjeta/SINPE, envío único y móvil OK.",
   );
 } finally {
   await browser.close();

@@ -49,8 +49,8 @@ No se reproducen cifras, metas comerciales ni sucursales de las capturas: las es
 
 ## Facturación según las fotografías aportadas
 
-La caja toma la distribución de las fotografías de Qupos: barra de acciones, total destacado, entrada por código, tabla de artículos, accesos rápidos a la derecha y una franja de estado inferior. Se conserva la identidad azul de SIPRO. La botonera utiliza el catálogo real, suma una unidad por toque y permite buscar, filtrar por categoría y cambiar de página. Las cantidades se validan contra existencias tanto en la interfaz como en el servidor.
+La caja toma la distribución de las fotografías de Qupos: barra de acciones, total destacado, entrada por código, tabla de artículos a todo el ancho y una franja de estado inferior. Se conserva la identidad azul de SIPRO. La revisión elimina los accesos rápidos y deja el ingreso por código o selección del catálogo. Las cantidades se validan contra existencias tanto en la interfaz como en el servidor.
 
-La ventana Pago separa cliente, medio de pago y confirmación. Incluye efectivo, tarjeta y SINPE, teclado numérico, botones que suman denominaciones y monto exacto. Muestra lo que falta por recibir o el vuelto; la factura se guarda antes de abrir su ticket. En móvil los paneles se apilan, la tabla permite desplazamiento horizontal y el diálogo tiene desplazamiento vertical. No se agregan opciones decorativas de crédito, cheque o dólares que el sistema no procese.
+La ventana Pago separa cliente, medio de pago y confirmación. Las opciones de efectivo, tarjeta y SINPE tienen mayor separación, junto a campos de cliente con más espacio. El monto recibido se escribe directamente; se eliminan el teclado numérico y los botones de billetes. Cada factura conserva un solo medio de pago. Muestra lo que falta por recibir o el vuelto; la factura se guarda antes de abrir su ticket. En móvil los paneles se apilan, la tabla permite desplazamiento horizontal y el diálogo tiene desplazamiento vertical. No se agregan opciones decorativas de crédito, cheque o dólares que el sistema no procese.
 
 [Facturación](capturas/caja.png) · [Pago](capturas/cobro.png)
