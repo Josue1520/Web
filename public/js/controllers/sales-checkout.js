@@ -35,15 +35,28 @@ export function checkoutSale() {
       ),
       total: crc(total),
       width: receiptWidth(),
+      keys: ["7", "8", "9", "4", "5", "6", "1", "2", "3", ".", "0", "Borrar"]
+        .map((key) =>
+          view("pos-cash-key", { key, label: key === "." ? "Decimal" : key }),
+        )
+        .join(""),
+      denominations: [1000, 2000, 5000, 10000, 20000, 50000]
+        .map((value) =>
+          view("pos-cash-denomination", { value, label: crc(value) }),
+        )
+        .join(""),
     }),
   );
   const form = $("#checkout-form"),
     modal = $("#modal"),
     input = $('[name="paid"]', form);
   let busy = false;
+  // Keep a string for a trailing decimal point while using the keypad.
+  let cashText = model.saleDraft.paid;
   function paintPayment() {
     const cash = model.saleDraft.payment === "Efectivo";
     $("#cash-field").hidden = !cash;
+    $("#cash-keyboard").hidden = !cash;
     input.required = cash;
     input.disabled = !cash;
     $("#electronic-payment").hidden = cash;
@@ -67,9 +80,16 @@ export function checkoutSale() {
       cash && balance < 0 ? "El efectivo recibido no cubre el total." : "",
     );
   }
+  function setCash(value) {
+    cashText = value;
+    input.value = value.endsWith(".") ? value.slice(0, -1) : value;
+    model.saleDraft.paid = input.value;
+    paintPayment();
+  }
   form.oninput = (e) => {
     if (e.target.name in model.saleDraft)
       model.saleDraft[e.target.name] = e.target.value;
+    if (e.target === input) cashText = input.value;
     paintPayment();
   };
   form.onclick = (e) => {
@@ -79,7 +99,27 @@ export function checkoutSale() {
       model.saleDraft.payment = payment.dataset.payment;
       paintPayment();
     }
+    const key = e.target.closest("[data-cash-key]")?.dataset.cashKey;
+    if (key) {
+      if (key === "Borrar") setCash(cashText.slice(0, -1));
+      else if (key === ".") {
+        if (!cashText.includes(".")) setCash((cashText || "0") + ".");
+      } else if (
+        cashText.length < 14 &&
+        (!cashText.includes(".") || cashText.split(".")[1].length < 2)
+      )
+        setCash(cashText + key);
+    }
+    const denomination = e.target.closest("[data-cash-add]")?.dataset.cashAdd;
+    if (denomination)
+      setCash(
+        String(
+          Math.round((Number(cashText || 0) + Number(denomination)) * 100) /
+            100,
+        ),
+      );
   };
+  $("#exact-cash").onclick = () => setCash(String(total));
   // Block closing while the server confirms the sale, so another checkout cannot submit it again.
   const guardCancel = (e) => {
     if (busy) e.preventDefault();

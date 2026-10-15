@@ -107,6 +107,14 @@
           Ticket de {{{width}}} mm · Podrás imprimirlo al guardar.
         </p>
       </section>
+      <fieldset class="pos-keyboard" id="cash-keyboard">
+        <legend>Ingresar efectivo</legend>
+        <div class="pos-keypad">{{{keys}}}</div>
+        <div class="pos-denominations">{{{denominations}}}</div>
+        <button type="button" class="btn block" id="exact-cash">
+          Monto exacto
+        </button>
+      </fieldset>
     </div>
     <p class="error" role="alert"></p>
     <div class="pos-checkout-footer">
@@ -118,6 +126,22 @@
     </div>
   </form>
 </template>
+<template id="pos-cash-key"
+  ><button
+    type="button"
+    class="btn"
+    data-cash-key="{{{key}}}"
+    aria-label="{{{label}}}"
+  >
+    {{{label}}}
+  </button></template
+>
+<template id="pos-cash-denomination"
+  ><button type="button" class="btn" data-cash-add="{{{value}}}">
+    + {{{label}}}
+  </button></template
+>
+
 <template id="invoices-page-2">
   <strong>{{{esc}}}</strong><small>{{{esc2}}} · {{{stock}}} disponibles</small>
 </template>

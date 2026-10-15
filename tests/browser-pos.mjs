@@ -70,6 +70,13 @@ try {
   });
   await open();
   await modal.getByLabel("Nombre del cliente").fill("Cliente de prueba");
+  for (const digit of ["1", "8", "0", "0"])
+    await modal.getByRole("button", { name: digit, exact: true }).click();
+  await modal.getByRole("button", { name: "Decimal", exact: true }).click();
+  await modal.getByRole("button", { name: "5", exact: true }).click();
+  assert.equal(await cash.inputValue(), "1800.5");
+  await modal.getByRole("button", { name: "Borrar", exact: true }).click();
+  assert.equal(await cash.inputValue(), "1800");
   await cash.fill("1000");
   await modal.getByRole("button", { name: "Emitir factura" }).click();
   assert.equal((await state()).invoices.length, 0);
@@ -81,9 +88,12 @@ try {
     "Cliente de prueba",
   );
   assert.equal(await cash.inputValue(), "1000");
-  await cash.fill("2000");
+  await modal.locator('[data-cash-add="1000"]').click();
   assert.equal(await cash.inputValue(), "2000");
-  await page.screenshot({ path: "test-results/pos-cobro.png" });
+  await page.screenshot({
+    path: "test-results/pos-cobro.png",
+    animations: "disabled",
+  });
   // Una respuesta lenta no permite doble envío ni cerrar y abrir otro cobro.
   let requests = 0;
   await page.route("**/api/invoices", async (route) => {
@@ -109,6 +119,7 @@ try {
     await open();
     await modal.getByRole("button", { name: payment, exact: true }).click();
     assert.equal(await cash.isVisible(), false);
+    assert.equal(await modal.locator("#cash-keyboard").isVisible(), false);
     await modal.getByRole("button", { name: "Emitir factura" }).click();
     await modal
       .getByRole("heading", { name: `FAC-0000${index + 2}` })
@@ -130,7 +141,9 @@ try {
   );
   await page.screenshot({ path: "test-results/pos-movil.png", fullPage: true });
   await open();
-  await cash.fill("1000");
+  await modal
+    .getByRole("button", { name: "Monto exacto", exact: true })
+    .click();
   assert.equal(await cash.inputValue(), "1000");
   assert.ok(await modal.evaluate((el) => el.scrollWidth <= el.clientWidth));
   await page.screenshot({ path: "test-results/pos-cobro-movil.png" });
@@ -142,7 +155,7 @@ try {
   assert.equal(snapshot.products[0].stock, 16);
   assert.deepEqual(errors, []);
   console.log(
-    "POS: escaneo y catálogo, existencias, cobro directo, efectivo/tarjeta/SINPE, envío único y móvil OK.",
+    "POS: escaneo y catálogo, existencias, cobro con teclado y billetes, efectivo/tarjeta/SINPE, envío único y móvil OK.",
   );
 } finally {
   await browser.close();

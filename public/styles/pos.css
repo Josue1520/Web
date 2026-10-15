@@ -177,8 +177,8 @@
   min-height: 41px;
 }
 #modal:has(.pos-checkout) {
-  width: min(960px, calc(100vw - 32px));
-  max-width: 960px;
+  width: min(1080px, calc(100vw - 32px));
+  max-width: 1080px;
 }
 #modal:has(.pos-checkout) .dialog-head {
   background: #153c66;
@@ -225,7 +225,9 @@
 }
 .pos-payment-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 350px;
+  align-items: start;
+  gap: 48px;
   padding: 36px 32px;
 }
 .pos-payment-amounts {
@@ -277,10 +279,51 @@
   color: #64758a;
   margin-top: 26px;
 }
+.pos-keyboard {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.pos-keyboard legend {
+  color: #60738a;
+  font-size: 11px;
+  margin-bottom: 16px;
+}
+.pos-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.pos-keypad .btn {
+  font-size: 23px;
+  min-height: 54px;
+  background: #fdfefe;
+}
+.pos-keypad .btn[data-cash-key="Borrar"],
+.pos-keypad .btn[data-cash-key="."] {
+  font-size: 12px;
+}
+.pos-denominations {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 24px 0 16px;
+}
+.pos-denominations .btn {
+  min-height: 44px;
+  padding: 10px 6px;
+  font-size: 11px;
+  background: #e3edf9;
+  border-color: #b9cde3;
+}
 .pos-checkout > .error {
   margin: 0 24px;
 }
 .pos-checkout-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -295,6 +338,16 @@
 .pos-checkout :focus-visible {
   outline: 3px solid #7fa7d5;
   outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .pos-payment-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+  .pos-keyboard {
+    width: min(100%, 400px);
+    margin-inline: auto;
+  }
 }
 @media (max-width: 600px) {
   .pos-counter {
@@ -344,8 +397,8 @@
   }
   .pos-payment-body {
     grid-template-columns: minmax(0, 1fr);
-    padding: 16px;
-    gap: 20px;
+    padding: 24px 16px;
+    gap: 32px;
   }
   .pos-checkout-footer {
     padding: 16px;
