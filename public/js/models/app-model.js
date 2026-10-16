@@ -10,6 +10,8 @@ export const model = {
     discount: "0",
     payment: "Efectivo",
     paid: "",
+    cardPaid: "0",
+    sinpePaid: "0",
     notes: "",
   },
   events: new EventTarget(),

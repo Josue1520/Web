@@ -32,7 +32,7 @@ Estas cuentas contienen datos ficticios para la presentación. En **Usuarios** p
 - **Productos:** catálogo, búsqueda por nombre/código, filtros de categoría/estado, IVA configurable, precio, presentación y asociación con varios proveedores y sus precios de compra.
 - **Inventario:** existencias iniciales, ajustes con motivo, mínimos y alertas, registro de entradas/salidas y consulta de proveedores asociados.
 - **Pedidos:** creación manual o recomendación por proveedor según faltantes, cantidades editables, revisión antes de guardar, modificación de pedidos pendientes, búsqueda y recepción completa. Recibir un pedido suma sus existencias una sola vez.
-- **Facturación:** cliente, productos, descuento porcentual, IVA por producto, efectivo/tarjeta/SINPE, vuelto, consecutivo, historial y filtros. Anular requiere administrador y motivo; restaura las existencias una sola vez. Las facturas conservan los precios originales.
+- **Facturación:** cliente, productos, descuento porcentual, IVA por producto, efectivo/tarjeta/SINPE o pago mixto, vuelto, consecutivo, historial y filtros. Anular requiere administrador y motivo; restaura las existencias una sola vez. Las facturas conservan los precios originales.
 - **Reportes:** pedidos, compras recibidas, productos solicitados, ventas, inventario actual y utilidad bruta estimada. Consulta por fechas, proveedor y estado cuando aplica; impresión/PDF y exportación a Excel para administradores.
 
 **PDF:** las ventas se imprimen como ticket de 80/58 mm; los reportes se imprimen en A4. El botón abre el diálogo del navegador; selecciona **Guardar como PDF**. Permite reimprimir comprobantes históricos. **Excel:** se descarga un archivo `.xls` con contenido SpreadsheetML (XML de Excel); no es un CSV renombrado. Excel puede mostrar un aviso de compatibilidad por ser un formato XML antiguo; también se puede abrir en LibreOffice Calc.
@@ -47,7 +47,7 @@ Abre **Resumen** en la barra lateral. La distribución toma como referencia las 
 - **Ventas del año por meses:** selecciona el año y pulsa **Buscar año**. Los meses anteriores al inicio del sistema o futuros aparecen como no disponibles. **Ver datos del gráfico** abre los valores en una tabla.
 - **Utilidad bruta estimada:** solo la ve el administrador. Usa ingresos sin IVA menos el costo histórico de los productos vendidos; no descuenta gastos operativos. Si falta información de costos, ese mes no se representa como cero.
 - **Detalle de ventas y pagos:** elige **Día**, **Semana**, **Mes** o **Rango**. En Rango, completa **Desde · Ventas y pagos**, **Hasta · Ventas y pagos** y pulsa **Consultar ventas y pagos**. Las fechas son inclusivas. Este filtro actualiza el resumen, los pagos y las ventas por hora.
-- **Medios de pago:** efectivo, tarjeta y SINPE muestran importe, cantidad de facturas y participación. Efectivo corresponde al importe vendido, sin vuelto; no es el saldo físico de caja.
+- **Medios de pago:** efectivo, tarjeta y SINPE muestran importe, cantidad de facturas y participación. Efectivo corresponde al importe aplicado, sin vuelto; no es el saldo físico de caja. Una venta mixta reparte el importe entre sus medios y cuenta como una factura en cada medio utilizado; el total general cuenta esa venta una sola vez.
 - **Ventas semanales:** consulta la semana de la fecha de referencia en colones, unidades o cantidad de facturas. En vista Semana puedes marcar días, pulsar barras o elegir los accesos de semana completa, lunes a viernes y fin de semana. El gráfico siempre muestra esa semana como contexto.
 - **Ventas por hora:** suma las facturas del detalle seleccionado por hora de Costa Rica. Permite ver las 24 horas, la franja diurna 06:00–17:59 o la nocturna 18:00–05:59. Las facturas antiguas sin hora se informan aparte; no se les inventa una hora.
 
@@ -93,9 +93,13 @@ La interfaz recupera el azul **#1f5a99** y el azul oscuro **#153c66**, con fondo
 
 [Ver ventana de cobro](docs/capturas/cobro.png) · [Ver pantalla de acceso](docs/capturas/acceso.png) · [Ver resumen del negocio](docs/capturas/resumen.png) · [Ver ejemplo de ticket de 80 mm](docs/capturas/ticket-80.png)
 
-- **Facturación:** ingresa productos por código o lector de barras que funcione como teclado y finalice con Enter. También puedes seleccionarlos con **Buscar producto**, indicar la cantidad y pulsar **Agregar**. Revisa cantidades y descuento y pulsa **Cobrar venta**. En la ventana **Pago**, completa el cliente y elige efectivo, tarjeta o SINPE. Escribe el monto en **Efectivo recibido** o utiliza el teclado numérico. Los botones de billetes suman al monto recibido y **Monto exacto** lo iguala al total. El teclado y los billetes tienen mayor separación; se muestra el vuelto o cuánto falta por recibir. Cada factura usa un solo medio de pago. Pulsa **Emitir factura** para guardar y descontar inventario. **Volver a la venta** conserva el borrador durante la sesión de la página; recargarla descarta una venta todavía no emitida.
+- **Facturación:** ingresa productos por código o lector de barras que funcione como teclado y finalice con Enter. También puedes seleccionarlos con **Buscar producto**, indicar la cantidad y pulsar **Agregar**. Revisa cantidades y descuento y pulsa **Cobrar venta**. En la ventana **Pago**, completa el cliente y elige efectivo, tarjeta, SINPE o **Mixto**. Escribe el monto en **Efectivo recibido** o utiliza el teclado numérico. Los botones de billetes suman al monto recibido y **Monto exacto** lo iguala al total. El teclado y los billetes tienen mayor separación; se muestra el vuelto o cuánto falta por recibir. En **Mixto**, indica los montos de tarjeta y SINPE; el restante se asigna a efectivo. Combina al menos dos medios, sin superar el total. **Monto exacto** llena únicamente la parte pendiente en efectivo. Pulsa **Emitir factura** para guardar y descontar inventario. **Volver a la venta** conserva el borrador durante la sesión de la página; recargarla descarta una venta todavía no emitida.
 - **Ventas guardadas:** consulta facturas por número, cliente, fechas y estado. Abre **Ver / reimprimir ticket** para imprimir comprobantes anteriores. Reimprimir no crea otra venta ni vuelve a descontar inventario.
 - Atajos de caja: **F2** código, **F4** catálogo, **F8** historial, **F9** abrir cobro. **F10** abre el cobro desde la caja y emite la factura desde la ventana Pago, después de validar los campos. Los otros diálogos no reciben atajos de caja.
+
+Por ejemplo, en una venta de ₡10.000 puedes indicar ₡4.000 en tarjeta y ₡2.000 en SINPE. La parte en efectivo será ₡4.000; si recibes ₡5.000, el vuelto será ₡1.000. También puedes combinar tarjeta y SINPE sin efectivo. El desglose se conserva en el ticket, el dashboard y el reporte de facturas de venta/Excel.
+
+[Ver pago mixto](docs/capturas/pago-mixto.png)
 
 ### Imprimir un ticket
 
@@ -104,7 +108,7 @@ La interfaz recupera el azul **#1f5a99** y el azul oscuro **#153c66**, con fondo
 3. Pulsa **Imprimir ticket** y elige tu impresora térmica instalada en Windows, macOS o Linux. También puedes seleccionar **Guardar como PDF**.
 4. Usa el ancho de rollo correspondiente, escala **100%**, sin encabezados ni pies de página del navegador. Si el controlador impone otro tamaño, selecciona el mismo ancho en sus preferencias.
 
-El ticket incluye número, fecha/hora (para ventas nuevas), cajero, cliente, productos, cantidades, precios, descuento, IVA, total, pago y vuelto. El largo del PDF se adapta al contenido. Las facturas anuladas se imprimen identificadas como **FACTURA ANULADA**. Los reportes y registros de facturas de proveedores mantienen su formato A4.
+El ticket incluye número, fecha/hora (para ventas nuevas), cajero, cliente, productos, cantidades, precios, descuento, IVA, total, pago y vuelto. En pago mixto incluye el importe aplicado por cada medio. El largo del PDF se adapta al contenido. Las facturas anuladas se imprimen identificadas como **FACTURA ANULADA**. Los reportes y registros de facturas de proveedores mantienen su formato A4.
 
 La impresión utiliza el diálogo del navegador: no incluye impresión silenciosa, apertura de gaveta ni comandos de corte ESC/POS. Se verificó el contenido y tamaño de los PDF de 80/58 mm; la impresión física debe probarse con el modelo y controlador disponibles en tu PC.
 

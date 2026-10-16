@@ -42,3 +42,25 @@ export function purchaseTotals(items) {
   );
   return { ...sum, total: round(sum.subtotal + sum.vat) };
 }
+
+// Proyección de cobro; el servidor vuelve a validar el reparto al emitir.
+export function mixedPaymentTotals(total, draft) {
+  const card = Math.round(Number(draft.cardPaid || 0) * 100);
+  const sinpe = Math.round(Number(draft.sinpePaid || 0) * 100);
+  const cash = Math.round(total * 100) - card - sinpe;
+  return {
+    cash: Math.max(0, cash) / 100,
+    electronic: (card + sinpe) / 100,
+    valid:
+      Number.isFinite(card) &&
+      Number.isFinite(sinpe) &&
+      card >= 0 &&
+      sinpe >= 0 &&
+      cash >= 0 &&
+      [cash, card, sinpe].filter((v) => v > 0).length >= 2,
+    error:
+      cash < 0
+        ? "Tarjeta y SINPE no pueden superar el total."
+        : "Indica importes para combinar al menos dos medios de pago.",
+  };
+}

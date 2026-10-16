@@ -131,6 +131,71 @@ try {
     await close();
   }
   assert.equal((await state()).products[0].stock, 16);
+  await addArticle();
+  await open();
+  await modal.getByRole("button", { name: "Mixto", exact: true }).click();
+  await modal.getByRole("button", { name: "Emitir factura" }).click();
+  assert.equal((await state()).invoices.length, 3);
+  const card = modal.getByLabel("Monto con tarjeta (₡)", { exact: true });
+  const sinpe = modal.getByLabel("Monto con SINPE (₡)", { exact: true });
+  await card.fill("1001");
+  assert.equal(await card.evaluate((el) => el.validity.valid), false);
+  await card.fill("300");
+  await sinpe.fill("200");
+  await modal
+    .getByRole("button", { name: "Monto exacto", exact: true })
+    .click();
+  assert.equal(await cash.inputValue(), "500");
+  await cash.fill("1000");
+  await modal.getByRole("button", { name: "Volver a la venta" }).click();
+  await open();
+  assert.equal(await card.inputValue(), "300");
+  assert.equal(await sinpe.inputValue(), "200");
+  await page.screenshot({
+    path: "test-results/pos-pago-mixto.png",
+    animations: "disabled",
+  });
+  await modal.getByRole("button", { name: "Emitir factura" }).click();
+  await modal.getByRole("heading", { name: "FAC-00004" }).waitFor();
+  snapshot = await state();
+  assert.equal(snapshot.invoices[3].change, 500);
+  assert.deepEqual(snapshot.invoices[3].payments, [
+    { method: "Efectivo", amount: 500 },
+    { method: "Tarjeta", amount: 300 },
+    { method: "SINPE", amount: 200 },
+  ]);
+  for (const method of ["Efectivo", "Tarjeta", "SINPE"])
+    await modal.getByText(`${method} aplicado`, { exact: true }).waitFor();
+  await page.evaluate(() => {
+    window.print = () => {
+      window.__printed = true;
+    };
+  });
+  await modal.getByRole("button", { name: "Imprimir ticket" }).click();
+  await page.waitForFunction(() => window.__printed);
+  assert.match(await page.locator("#print-area").innerText(), /Pago: Mixto/);
+  await page.pdf({
+    path: "test-results/ticket-mixto.pdf",
+    preferCSSPageSize: true,
+  });
+  await close();
+  await addArticle();
+  await open();
+  assert.equal(
+    await modal
+      .getByRole("button", { name: "Efectivo", exact: true })
+      .getAttribute("aria-pressed"),
+    "true",
+  );
+  await modal.getByRole("button", { name: "Mixto", exact: true }).click();
+  await card.fill("400");
+  await sinpe.fill("600");
+  assert.equal(await cash.isVisible(), false);
+  assert.equal(await modal.locator("#cash-keyboard").isVisible(), false);
+  await modal.getByRole("button", { name: "Emitir factura" }).click();
+  await modal.getByRole("heading", { name: "FAC-00005" }).waitFor();
+  assert.equal((await state()).invoices[4].change, 0);
+  await close();
   await page.setViewportSize({ width: 390, height: 844 });
   await addArticle();
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -146,16 +211,24 @@ try {
     .click();
   assert.equal(await cash.inputValue(), "1000");
   assert.ok(await modal.evaluate((el) => el.scrollWidth <= el.clientWidth));
+  await modal.getByRole("button", { name: "Mixto", exact: true }).click();
+  await card.fill("250");
+  await sinpe.fill("250");
+  await modal
+    .getByRole("button", { name: "Monto exacto", exact: true })
+    .click();
+  assert.equal(await cash.inputValue(), "500");
+  assert.ok(await modal.evaluate((el) => el.scrollWidth <= el.clientWidth));
   await page.screenshot({ path: "test-results/pos-cobro-movil.png" });
   await close();
   await page.reload();
   await page.locator("#sale-form").waitFor();
   snapshot = await state();
-  assert.equal(snapshot.invoices.length, 3);
-  assert.equal(snapshot.products[0].stock, 16);
+  assert.equal(snapshot.invoices.length, 5);
+  assert.equal(snapshot.products[0].stock, 14);
   assert.deepEqual(errors, []);
   console.log(
-    "POS: escaneo y catálogo, existencias, cobro con teclado y billetes, efectivo/tarjeta/SINPE, envío único y móvil OK.",
+    "POS: escaneo y catálogo, existencias, cobro con teclado y billetes, efectivo/tarjeta/SINPE, pago mixto, ticket, envío único y móvil OK.",
   );
 } finally {
   await browser.close();

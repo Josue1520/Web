@@ -2,7 +2,7 @@ import { $, crc, field } from "../views/components.js";
 import { view } from "../views/template.js";
 import { openDialog, toast } from "../views/feedback.js";
 import { api, model, receiptWidth } from "../models/app-model.js";
-import { saleTotals } from "../models/financial-model.js";
+import { saleTotals, mixedPaymentTotals } from "../models/financial-model.js";
 import { reload } from "./application.js";
 import { viewInvoice } from "./sales.js";
 
@@ -33,6 +33,20 @@ export function checkoutSale() {
         "number",
         'min="0" step="0.01" inputmode="decimal"',
       ),
+      cardPaid: field(
+        "cardPaid",
+        "Monto con tarjeta (₡)",
+        model.saleDraft.cardPaid,
+        "number",
+        'min="0" step="0.01" inputmode="decimal"',
+      ),
+      sinpePaid: field(
+        "sinpePaid",
+        "Monto con SINPE (₡)",
+        model.saleDraft.sinpePaid,
+        "number",
+        'min="0" step="0.01" inputmode="decimal"',
+      ),
       total: crc(total),
       width: receiptWidth(),
       keys: ["7", "8", "9", "4", "5", "6", "1", "2", "3", ".", "0", "Borrar"]
@@ -54,7 +68,18 @@ export function checkoutSale() {
   // Keep a string for a trailing decimal point while using the keypad.
   let cashText = model.saleDraft.paid;
   function paintPayment() {
-    const cash = model.saleDraft.payment === "Efectivo";
+    const mixed = model.saleDraft.payment === "Mixto";
+    const split = mixedPaymentTotals(total, model.saleDraft);
+    const cash =
+      model.saleDraft.payment === "Efectivo" || (mixed && split.cash > 0);
+    $("#mixed-fields").hidden = !mixed;
+    for (const name of ["cardPaid", "sinpePaid"]) {
+      const field = form.elements[name];
+      field.disabled = !mixed;
+      field.required = mixed;
+      field.setCustomValidity(mixed && !split.valid ? split.error : "");
+    }
+    $("#mixed-cash-amount").textContent = crc(split.cash);
     $("#cash-field").hidden = !cash;
     $("#cash-keyboard").hidden = !cash;
     input.required = cash;
@@ -69,9 +94,14 @@ export function checkoutSale() {
         ),
       );
     $("#payment-label").textContent =
-      `Pago con ${model.saleDraft.payment.toLowerCase()}`;
+      model.saleDraft.payment === "Mixto"
+        ? "Pago mixto"
+        : `Pago con ${model.saleDraft.payment.toLowerCase()}`;
     const balance =
-      Math.round((Number(model.saleDraft.paid || 0) - total) * 100) / 100;
+      Math.round(
+        (Number(model.saleDraft.paid || 0) - (mixed ? split.cash : total)) *
+          100,
+      ) / 100;
     $("#change-label").textContent =
       balance < 0 ? "Falta por recibir" : "Vuelto";
     $("#change-amount").textContent = crc(Math.abs(balance));
@@ -119,7 +149,14 @@ export function checkoutSale() {
         ),
       );
   };
-  $("#exact-cash").onclick = () => setCash(String(total));
+  $("#exact-cash").onclick = () =>
+    setCash(
+      String(
+        model.saleDraft.payment === "Mixto"
+          ? mixedPaymentTotals(total, model.saleDraft).cash
+          : total,
+      ),
+    );
   // Block closing while the server confirms the sale, so another checkout cannot submit it again.
   const guardCancel = (e) => {
     if (busy) e.preventDefault();
@@ -147,6 +184,11 @@ export function checkoutSale() {
     try {
       invoice = await api("invoices", "POST", {
         ...model.saleDraft,
+        paid:
+          model.saleDraft.payment === "Mixto" &&
+          mixedPaymentTotals(total, model.saleDraft).cash === 0
+            ? 0
+            : model.saleDraft.paid,
         items: model.cart,
       });
     } catch (error) {
@@ -164,6 +206,8 @@ export function checkoutSale() {
       discount: "0",
       payment: "Efectivo",
       paid: "",
+      cardPaid: "0",
+      sinpePaid: "0",
       notes: "",
     };
     modal.close();

@@ -104,6 +104,8 @@ export async function dispatch(action, id, element) {
       discount: "0",
       payment: "Efectivo",
       paid: "",
+      cardPaid: "0",
+      sinpePaid: "0",
       notes: "",
     };
     location.hash = "home";

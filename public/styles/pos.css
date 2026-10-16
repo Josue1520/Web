@@ -279,6 +279,27 @@
   color: #64758a;
   margin-top: 26px;
 }
+.pos-mixed-fields {
+  margin: 24px 0;
+  padding: 20px;
+  border: 1px solid #c5d3e2;
+  background: #eaf0f7;
+  border-radius: 4px;
+}
+.pos-mixed-fields .field {
+  margin-top: 18px;
+}
+.pos-mixed-fields .form-help {
+  margin: 0;
+}
+.pos-mixed-remainder {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+  color: #153c66;
+  font-variant-numeric: tabular-nums;
+}
 .pos-keyboard {
   margin: 0;
   padding: 0;
@@ -389,7 +410,7 @@
   .pos-payment-methods .btn {
     min-width: 0;
     padding: 12px 16px;
-    flex: 1;
+    flex: 1 1 calc(50% - 12px);
   }
   .pos-customer-fields {
     grid-template-columns: minmax(0, 1fr);

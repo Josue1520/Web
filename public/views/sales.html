@@ -84,6 +84,7 @@
       <button type="button" class="btn" data-payment="Efectivo">Efectivo</button
       ><button type="button" class="btn" data-payment="Tarjeta">Tarjeta</button
       ><button type="button" class="btn" data-payment="SINPE">SINPE</button>
+      <button type="button" class="btn" data-payment="Mixto">Mixto</button>
     </div>
     <div class="pos-customer-fields">
       {{{customer}}}{{{identification}}}{{{notes}}}
@@ -93,6 +94,17 @@
         <p id="payment-label"></p>
         <span>Total a pagar</span
         ><strong class="pos-payment-total">{{{total}}}</strong>
+        <div id="mixed-fields" class="pos-mixed-fields" hidden>
+          <p class="form-help">
+            Indica los montos confirmados en tarjeta y SINPE. El resto se cobra
+            en efectivo.
+          </p>
+          {{{cardPaid}}}{{{sinpePaid}}}
+          <div class="pos-mixed-remainder">
+            <span>Parte en efectivo</span
+            ><strong id="mixed-cash-amount" aria-live="polite"></strong>
+          </div>
+        </div>
         <div id="cash-field">
           {{{paid}}}
           <div class="pos-change">

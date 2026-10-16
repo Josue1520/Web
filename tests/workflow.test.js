@@ -614,3 +614,136 @@ test("actualizar una base anterior conserva registros y agrega facturas de compr
   assert.equal(saved.purchaseInvoices.length, 1);
   assert.equal(saved.products[0].stock, before.products[0].stock + 2);
 });
+
+test("pago mixto: valida antes de guardar, conserva desglose y vuelto, reparte dashboard y anula una sola venta", async () => {
+  const body = {
+    customer: "Cliente mixto",
+    items: [{ productId: 3, qty: 2 }],
+    discount: 10,
+    payment: "Mixto",
+    cardPaid: 500,
+    sinpePaid: 800,
+    paid: 2000,
+  };
+  const initial = (await call("state")).body;
+  for (const change of [
+    { cardPaid: 2500 },
+    { cardPaid: -1 },
+    { sinpePaid: true },
+    { cardPaid: "NaN" },
+    { cardPaid: 1.001 },
+    { cardPaid: [] },
+    { paid: 1129.99 },
+    { cardPaid: 0, sinpePaid: 0 },
+    { cardPaid: 2430, sinpePaid: 0 },
+    { cardPaid: 1000, sinpePaid: 1430, paid: 1 },
+  ]) {
+    assert.equal(
+      (await call("invoices", "POST", { ...body, ...change })).status,
+      400,
+    );
+  }
+  const unchanged = (await call("state")).body;
+  assert.deepEqual(unchanged.products, initial.products);
+  assert.deepEqual(unchanged.movements, initial.movements);
+  assert.equal(unchanged.invoices.length, 0);
+  const response = await call("invoices", "POST", body);
+  assert.equal(response.status, 201);
+  const invoice = response.body;
+  assert.equal(invoice.total, 2430);
+  assert.equal(invoice.paid, 3300);
+  assert.equal(invoice.change, 870);
+  assert.deepEqual(invoice.payments, [
+    { method: "Efectivo", amount: 1130 },
+    { method: "Tarjeta", amount: 500 },
+    { method: "SINPE", amount: 800 },
+  ]);
+  const state = (await call("state")).body;
+  assert.equal(
+    state.products.find((p) => p.id === 3).stock,
+    initial.products.find((p) => p.id === 3).stock - 2,
+  );
+  const persisted = openStore(join(dir, "test.sqlite"));
+  assert.deepEqual(persisted.read().invoices[0].payments, invoice.payments);
+  persisted.close();
+  const dashboard = (await call("dashboard?period=day")).body;
+  assert.equal(dashboard.selected.count, 1);
+  assert.deepEqual(
+    dashboard.payments.map((p) => p.total),
+    [1130, 500, 800],
+  );
+  assert.equal(
+    dashboard.payments.reduce((sum, p) => sum + p.total, 0),
+    2430,
+  );
+  const report = (await call("reports?type=sales")).body;
+  assert.deepEqual(report.rows[0].slice(-4), ["Mixto", 1130, 500, 800]);
+  assert.equal(
+    (
+      await call(`invoices/${invoice.id}/void`, "POST", {
+        reason: "Prueba de devolución",
+      })
+    ).status,
+    201,
+  );
+  assert.equal(
+    (
+      await call(`invoices/${invoice.id}/void`, "POST", {
+        reason: "No duplicar",
+      })
+    ).status,
+    400,
+  );
+  assert.deepEqual(
+    (await call("dashboard?period=day")).body.payments.map((p) => p.total),
+    [0, 0, 0],
+  );
+  assert.equal(
+    (await call("state")).body.products.find((p) => p.id === 3).stock,
+    initial.products.find((p) => p.id === 3).stock,
+  );
+});
+
+test("pago mixto: efectivo+tarjeta, tarjeta+SINPE sin efectivo y centavos exactos", async () => {
+  const body = {
+    customer: "Cliente",
+    items: [{ productId: 3, qty: 1 }],
+    payment: "Mixto",
+  };
+  const cashCard = await call("invoices", "POST", {
+    ...body,
+    cardPaid: 350,
+    paid: 1000,
+  });
+  assert.equal(cashCard.status, 201);
+  assert.deepEqual(cashCard.body.payments, [
+    { method: "Efectivo", amount: 1000 },
+    { method: "Tarjeta", amount: 350 },
+  ]);
+  assert.equal(cashCard.body.change, 0);
+  const digital = await call("invoices", "POST", {
+    ...body,
+    cardPaid: 350,
+    sinpePaid: 1000,
+    paid: 0,
+  });
+  assert.equal(digital.status, 201);
+  assert.equal(digital.body.paid, 1350);
+  assert.equal(digital.body.change, 0);
+  assert.deepEqual(digital.body.payments, [
+    { method: "Tarjeta", amount: 350 },
+    { method: "SINPE", amount: 1000 },
+  ]);
+  app.store.change((s) => {
+    s.products.find((p) => p.id === 3).price = 0.3;
+  });
+  const cents = await call("invoices", "POST", {
+    ...body,
+    cardPaid: 0.1,
+    sinpePaid: 0.2,
+    paid: 0,
+  });
+  assert.equal(cents.status, 201);
+  assert.equal(cents.body.change, 0);
+  assert.equal(cents.body.total, 0.3);
+});

@@ -305,12 +305,61 @@ export function createInvoice(s, user, b) {
   const total = money(items.reduce((sum, l) => sum + l.total, 0));
   const payment = text(b.payment, "Medio de pago");
   ensure(
-    ["Efectivo", "Tarjeta", "SINPE"].includes(payment),
+    ["Efectivo", "Tarjeta", "SINPE", "Mixto"].includes(payment),
     "Medio de pago inválido.",
   );
-  const paid =
-    payment === "Efectivo" ? money(number(b.paid, "Monto recibido")) : total;
-  ensure(paid >= total, "El monto recibido no cubre la factura.");
+  let payments, paid, change;
+  if (payment === "Mixto") {
+    // Trabajar en centavos evita que una diferencia decimal deje una factura sin cubrir.
+    const cents = (value, label) => {
+      ensure(
+        typeof value === "string" || typeof value === "number",
+        `${label}: introduce un monto válido.`,
+      );
+      const n = number(value, label);
+      ensure(
+        Math.abs(n * 100 - Math.round(n * 100)) < 0.000001,
+        `${label}: usa como máximo dos decimales.`,
+      );
+      return Math.round(n * 100);
+    };
+    const totalCents = Math.round(total * 100);
+    const card = cents(b.cardPaid ?? 0, "Monto en tarjeta");
+    const sinpe = cents(b.sinpePaid ?? 0, "Monto en SINPE");
+    ensure(
+      card + sinpe <= totalCents,
+      "Tarjeta y SINPE no pueden superar el total de la factura.",
+    );
+    const cash = totalCents - card - sinpe;
+    payments = [
+      ["Efectivo", cash],
+      ["Tarjeta", card],
+      ["SINPE", sinpe],
+    ]
+      .filter(([, amount]) => amount > 0)
+      .map(([method, amount]) => ({ method, amount: amount / 100 }));
+    ensure(
+      payments.length >= 2,
+      "El pago mixto debe combinar al menos dos medios de pago.",
+    );
+    const received = cents(b.paid ?? 0, "Efectivo recibido");
+    ensure(
+      received >= cash,
+      "El efectivo recibido no cubre la parte en efectivo.",
+    );
+    ensure(
+      cash > 0 || received === 0,
+      "Esta combinación no requiere efectivo recibido.",
+    );
+    paid = (card + sinpe + received) / 100;
+    change = (received - cash) / 100;
+  } else {
+    paid =
+      payment === "Efectivo" ? money(number(b.paid, "Monto recibido")) : total;
+    ensure(paid >= total, "El monto recibido no cubre la factura.");
+    change = money(paid - total);
+    payments = [{ method: payment, amount: total }];
+  }
   const invoice = {
     id: next(s.invoices),
     date: today(),
@@ -325,7 +374,8 @@ export function createInvoice(s, user, b) {
     vat: money(items.reduce((sum, l) => sum + l.vat, 0)),
     payment,
     paid,
-    change: money(paid - total),
+    change,
+    payments,
     status: "Emitida",
     user: user.username,
   };
@@ -340,6 +390,13 @@ export function createInvoice(s, user, b) {
   s.invoices.push(invoice);
   return invoice;
 }
+// Los comprobantes anteriores no tienen desglose; conservan su medio original.
+export function invoicePaymentAmount(invoice, method) {
+  if (invoice.payment !== "Mixto")
+    return invoice.payment === method ? invoice.total : 0;
+  return invoice.payments.find((p) => p.method === method)?.amount ?? 0;
+}
+
 export function voidInvoice(s, user, id, b) {
   admin(user);
   const invoice = find(s.invoices, id);
@@ -530,6 +587,10 @@ export function report(s, user, query) {
         "IVA",
         "Total",
         "Estado",
+        "Medio de pago",
+        "Efectivo aplicado",
+        "Tarjeta",
+        "SINPE",
       ];
       rows = invoices
         .filter((i) => !status || i.status === status)
@@ -541,6 +602,10 @@ export function report(s, user, query) {
           i.vat,
           i.total,
           i.status,
+          i.payment,
+          invoicePaymentAmount(i, "Efectivo"),
+          invoicePaymentAmount(i, "Tarjeta"),
+          invoicePaymentAmount(i, "SINPE"),
         ]);
     }
   }

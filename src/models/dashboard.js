@@ -1,4 +1,4 @@
-import { ensure } from "./domain.js";
+import { ensure, invoicePaymentAmount } from "./domain.js";
 import { today } from "./store.js";
 
 const iso = (date) => date.toISOString().slice(0, 10);
@@ -244,7 +244,10 @@ export function salesDashboard(
 
   const selectedSummary = summary(selected);
   const payments = ["Efectivo", "Tarjeta", "SINPE"].map((name) => {
-    const result = summary(selected.filter((i) => i.payment === name));
+    const portions = selected
+      .filter((i) => i.payment === name || invoicePaymentAmount(i, name) > 0)
+      .map((i) => ({ total: invoicePaymentAmount(i, name) }));
+    const result = summary(portions);
     return {
       name,
       ...result,

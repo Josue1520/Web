@@ -378,6 +378,17 @@ export function ticketContent(i, width = 80) {
     crc13: crc(i.vat),
     crc14: crc(i.total),
     esc15: esc(i.payment),
+    paymentBreakdown:
+      i.payment === "Mixto"
+        ? i.payments
+            .map((p) =>
+              view("ticket-payment-part", {
+                method: esc(p.method),
+                amount: crc(p.amount),
+              }),
+            )
+            .join("")
+        : "",
     crc16: crc(i.paid),
     crc17: crc(i.change),
     slot18: i.notes ? view("ticket-content-7", { esc: esc(i.notes) }) : "",
